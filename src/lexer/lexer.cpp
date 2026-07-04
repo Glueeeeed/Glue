@@ -10,8 +10,6 @@
 
 std::vector<Token> lexer(const char* input) {
 
-    std::vector<std::string> keywords = { "shout", "glue", "sticky"};
-    std::vector<std::string> types = { "string", "float", "double", "int", "bond"};
     std::vector<Token> tokens;
     std::ifstream file(input);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -235,47 +233,19 @@ std::vector<Token> lexer(const char* input) {
                 column++;
             }
 
-            bool isType = false;
-            for (const std::string & type : types) {
-                if (word == type) {
-                    tokens.push_back({TokenType::TYPE, word, line, start_column});
-                    isType = true;
-                    break;
-                }
-            }
-
-
-            if (!isType) {
-                bool isIdentifier = true;
-                for (const std::string& keyword : keywords) {
-                    if (word == keyword) {
-                        tokens.push_back({TokenType::KEYWORD, word, line, start_column});
-                        isIdentifier = false;
-                        break;
-                    }
-                }
-
-                    if (word == "true") {
-                        tokens.push_back({TokenType::BOND_TRUE, word, line, start_column});
-                        continue;
-                    } else if (word == "false") {
-                        tokens.push_back({TokenType::BOND_FALSE, word, line, start_column});
-                        continue;
-                    } else if (word == "torn") {
-                        tokens.push_back({TokenType::BOND_TORN, word, line, start_column});
-                        continue;
-
-                    }
-
-                if (isIdentifier) {
-                    tokens.push_back({TokenType::IDENTIFIER, word, line, start_column});
-                }
+            auto it = KEYWORDS.find(word);
+            if (it != KEYWORDS.end()) {
+                tokens.push_back({it->second, word, line, start_column});
+            } else if (word == "true") {
+                tokens.push_back({TokenType::BOOLEAN_TRUE, word, line, start_column});
+            } else if (word == "false") {
+                tokens.push_back({TokenType::BOOLEAN_FALSE, word, line, start_column});
+            } else {
+                tokens.push_back({TokenType::IDENTIFIER, word, line, start_column});
             }
 
             continue;
-
         }
-
         std::string word(1,c);
         tokens.push_back({TokenType::UNKNOWN, word, line, column});
 

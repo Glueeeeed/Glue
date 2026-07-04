@@ -1,0 +1,23 @@
+/*g
+g
+g Glue is a minimalist procedural programming language
+g
+g*/
+
+// Variables declaration
+
+glue string awesome = "Glue is awesome!";
+int version = 1;
+double pi = 3.14;
+
+awesome = "Glue is the best!";
+
+// Displaying Data using the shout function
+
+shout(awesome);
+shout("Compilator version: ", version);
+shout("PI: ", pi);
+
+// Changing the value of a variable
+version = 2;
+shout("New version: ", version);

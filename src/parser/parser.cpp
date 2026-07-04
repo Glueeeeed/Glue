@@ -47,7 +47,7 @@ void Parser::parseAssign() {
     }
     nextToken();
 
-    if (currentToken().type != TokenType::NUMBER  && currentToken().type != TokenType::NUMBER_DOUBLE  && currentToken().type != TokenType::NUMBER_FLOAT && currentToken().type != TokenType::STRING && currentToken().type != TokenType::BOND_TRUE &&  currentToken().type != TokenType::BOND_FALSE && currentToken().type != TokenType::BOND_TORN) {
+    if (currentToken().type != TokenType::NUMBER  && currentToken().type != TokenType::NUMBER_DOUBLE  && currentToken().type != TokenType::NUMBER_FLOAT && currentToken().type != TokenType::STRING && currentToken().type != TokenType::BOOLEAN_TRUE &&  currentToken().type != TokenType::BOOLEAN_FALSE) {
         expect("SyntaxError: expected token 'VALUE'", currentToken().line, currentToken().column);
     }
     if (currentToken().type == TokenType::NUMBER) {
@@ -56,7 +56,7 @@ void Parser::parseAssign() {
         ast.addAssignment(identifier, ast.makeDouble(currentToken().value));
     } else if (currentToken().type == TokenType::NUMBER_FLOAT) {
         ast.addAssignment(identifier, ast.makeFloat(currentToken().value));
-    } else if (currentToken().type == TokenType::BOND_TRUE || currentToken().type == TokenType::BOND_FALSE || currentToken().type == TokenType::BOND_TORN) {
+    } else if (currentToken().type == TokenType::BOOLEAN_TRUE || currentToken().type == TokenType::BOOLEAN_FALSE) {
         ast.addAssignment(identifier, ast.makeBool(currentToken().value));
     } else {
         ast.addAssignment(identifier, ast.makeString(currentToken().value));
@@ -106,7 +106,7 @@ void Parser::parseDeclaration() {
     }
     nextToken();
 
-    if (currentToken().type != TokenType::NUMBER  && currentToken().type != TokenType::NUMBER_DOUBLE  && currentToken().type != TokenType::NUMBER_FLOAT && currentToken().type != TokenType::STRING && currentToken().type != TokenType::BOND_TRUE &&  currentToken().type != TokenType::BOND_FALSE && currentToken().type != TokenType::BOND_TORN) {
+    if (currentToken().type != TokenType::NUMBER  && currentToken().type != TokenType::NUMBER_DOUBLE  && currentToken().type != TokenType::NUMBER_FLOAT && currentToken().type != TokenType::STRING && currentToken().type != TokenType::BOOLEAN_TRUE &&  currentToken().type != TokenType::BOOLEAN_FALSE) {
         expect("SyntaxError: expected token 'VALUE'", currentToken().line, currentToken().column);
     }
     if (currentToken().type == TokenType::NUMBER) {
@@ -115,7 +115,7 @@ void Parser::parseDeclaration() {
         ast.addDeclaration(identifier, ast.makeDouble(currentToken().value), type, isConstant, stickyUsed,  isSticky );
     } else if (currentToken().type == TokenType::NUMBER_FLOAT) {
         ast.addDeclaration(identifier, ast.makeFloat(currentToken().value), type, isConstant, stickyUsed,  isSticky);
-    } else if ( currentToken().type == TokenType::BOND_TRUE || currentToken().type == TokenType::BOND_FALSE || currentToken().type == TokenType::BOND_TORN ) {
+    } else if ( currentToken().type == TokenType::BOOLEAN_TRUE || currentToken().type == TokenType::BOOLEAN_FALSE) {
         ast.addDeclaration(identifier, ast.makeBool(currentToken().value), type, isConstant, stickyUsed,  isSticky);
     } else if (currentToken().type == TokenType::STRING) {
         ast.addDeclaration(identifier, ast.makeString(currentToken().value), type, isConstant, stickyUsed,  isSticky);
