@@ -10,7 +10,6 @@ glue string awesome = "Glue is awesome!";
 int version = 1;
 double pi = 3.14;
 
-awesome = "Glue is the best!";
 
 // Displaying Data using the shout function
 
