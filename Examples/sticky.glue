@@ -1,0 +1,11 @@
+/*g
+g
+g Sticky is a language feature that allows you to declare constant variables that can be changed only once.
+g
+g*/
+
+
+
+sticky int x = 10;
+x = 20;  // OK
+x = 200; // Semantic error: 'x' can be assigned only once

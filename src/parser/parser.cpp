@@ -17,7 +17,7 @@ void Parser::parse() {
     Token nextToken = peekToken();
     if (cToken.type == TokenType::IDENTIFIER && nextToken.type == TokenType::EQUALS) {
         parseAssign();
-    } else if (cToken.type == TokenType::TYPE || cToken.type == TokenType::KEYWORD && cToken.value == "glue" || cToken.type == TokenType::KEYWORD && cToken.value == "sticky") {
+    } else if (cToken.type == TokenType::TYPE || cToken.type == TokenType::KEYWORD && cToken.value == "const" || cToken.type == TokenType::KEYWORD && cToken.value == "sticky") {
         parseDeclaration();
     } else if (cToken.type == TokenType::IDENTIFIER && nextToken.type != TokenType::EQUALS) {
         expect("SyntaxError:  invalid or unexpected token", currentToken().line, currentToken().column);
@@ -79,13 +79,13 @@ void Parser::parseDeclaration() {
     bool isSticky = false;
     bool stickyUsed = false;
 
-    if (currentToken().type == TokenType::KEYWORD && currentToken().value == "glue") {
+    if (currentToken().type == TokenType::KEYWORD && currentToken().value == "const") {
         isConstant = true;
         nextToken();
     } else if (currentToken().type == TokenType::KEYWORD && currentToken().value == "sticky") {
         isSticky = true;
         nextToken();
-    } else if (currentToken().type == TokenType::KEYWORD && currentToken().value != "glue" && currentToken().value != "sticky") {
+    } else if (currentToken().type == TokenType::KEYWORD && currentToken().value != "const" && currentToken().value != "sticky") {
         expect("SyntaxError: unexpected keyword '" + currentToken().value + "'", currentToken().line, currentToken().column);
     }
 

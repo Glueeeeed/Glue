@@ -6,7 +6,7 @@ g*/
 
 // Variables declaration
 
-glue string awesome = "Glue is awesome!";
+const string awesome = "Glue is awesome!";
 int version = 1;
 double pi = 3.14;
 

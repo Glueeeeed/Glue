@@ -50,11 +50,6 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
         expect("Semantic error: variable '" + varName + "'" + " is already declared");
     }
 
-    // if (idNode->isConst == true && typeNode->value == "any") {
-    //     expect("Semantic error: '" + varName + "' " + "of type '" + typeNode->value +  "' cannot be constant");
-    // }
-
-
     if (!isCompatible(varType, valueType)) {
         expect("Semantic error: Cannot assign a value of type "+ nodeTypeToString(valueType) + " to a variable of type " + varTypeFormatted);
     }
@@ -67,9 +62,6 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
 
 
 bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType valueType) {
-    // if (declaredType == "any") {
-    //     return true;
-    // }
 
     if (declaredType == "int" && valueType == NodeType::NUMBER) {
         return true;
@@ -128,7 +120,7 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     std::string declaredType = info.type;
 
     if (info.isConst == true) {
-        expect("Semantic error: '" + varName + "'" + " is glue");
+        expect("Semantic error: '" + varName + "'" + " is constant");
     }
 
 

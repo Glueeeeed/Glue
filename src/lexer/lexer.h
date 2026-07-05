@@ -38,7 +38,16 @@ std::vector<Token> lexer(const char* input);
 
 static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"shout", TokenType::KEYWORD},
-    {"glue", TokenType::KEYWORD},
+    {"const", TokenType::KEYWORD},
+    {"sticky", TokenType::KEYWORD},
+    {"if", TokenType::KEYWORD},
+    {"else", TokenType::KEYWORD},
+    {"while", TokenType::KEYWORD},
+    {"break", TokenType::KEYWORD},
+    {"continue", TokenType::KEYWORD},
+    {"return", TokenType::KEYWORD},
+    {"true", TokenType::BOOLEAN_TRUE},
+    {"false", TokenType::BOOLEAN_FALSE},
     {"string", TokenType::TYPE},
     {"bool", TokenType::TYPE},
     {"boolean", TokenType::TYPE},
