@@ -47,11 +47,11 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
     NodeType valueType = valNode->type;
 
     if (symbols.count(varName)) {
-        expect("Semantic error: variable '" + varName + "'" + " is already declared");
+        expect("Semantic Error: variable '" + varName + "' is already declared in this scope", idNode->line, idNode->column);
     }
 
     if (!isCompatible(varType, valueType)) {
-        expect("Semantic error: Cannot assign a value of type "+ nodeTypeToString(valueType) + " to a variable of type " + varTypeFormatted);
+        expect("Semantic Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " + varTypeFormatted, valNode->line, valNode->column);
     }
 
 
@@ -86,9 +86,13 @@ bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType va
     return false;
 }
 
-void SemanticAnalyzer::expect(std::string msg) {
+void SemanticAnalyzer::expect(std::string msg, int line, int column) {
     std::stringstream stream;
-    stream << msg << std::endl;
+    stream << msg;
+    if (line > 0) {
+        stream << " at " << line << ":" << column;
+    }
+    stream << std::endl;
     throw ParseError(stream.str());
 }
 
@@ -106,27 +110,27 @@ void SemanticAnalyzer::declareSymbol(const ASTNode *node, bool isConst, bool sti
 
 void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     const ASTNode* idNode   = node->children[0].get();
-    const ASTNode* typeNode = node->children[1].get();
+    const ASTNode* valNode = node->children[1].get();
     std::string varName = idNode->value;
-    NodeType valueType = typeNode->type;
+    NodeType valueType = valNode->type;
 
 
     if (symbols.count(varName) == 0) {
-        expect("Semantic Error: variable '" + varName + "'" + " is not declared");
+        expect("Semantic Error: variable '" + varName + "' is not declared in this scope", idNode->line, idNode->column);
     }
 
 
-    const SymbolInfo& info = symbols[varName];
+    SymbolInfo& info = symbols[varName];
     std::string declaredType = info.type;
 
     if (info.isConst == true) {
-        expect("Semantic error: '" + varName + "'" + " is constant");
+        expect("Semantic Error: cannot assign to variable '" + varName + "' because it is a constant", idNode->line, idNode->column);
     }
 
 
     if (info.isSticky == true) {
         if (info.stickyUsed == true) {
-            expect("Semantic error: '" + varName + "'" + " can be assigned only once");
+            expect("Semantic Error: variable '" + varName + "' is 'sticky' and has already been reassigned once", idNode->line, idNode->column);
         } else {
             info.stickyUsed = true;
         }
@@ -135,14 +139,8 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 
 
     if (!isCompatible(declaredType, valueType)) {
-        expect("Semantic error: Cannot assign a value of type "+ nodeTypeToString(valueType) + " to a variable of type '" + declaredType + "'");
+        expect("Semantic Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + declaredType + "'", valNode->line, valNode->column);
     }
-
-
-
-
-
-
 }
 
 

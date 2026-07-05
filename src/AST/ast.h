@@ -28,10 +28,12 @@ struct ASTNode {
     bool isConst;
     bool isSticky;
     bool stickyUsed;
+    int line;
+    int column;
     std::vector<std::unique_ptr<ASTNode>> children;
 
-    explicit ASTNode(NodeType t, std::string v = "", bool isconst = false, bool IsSticky = false, bool StickyUsed = false)
-        : type(t), isConst(isconst) , isSticky(IsSticky), stickyUsed(StickyUsed) , value(std::move(v)) {}
+    explicit ASTNode(NodeType t, std::string v = "", bool isconst = false, bool IsSticky = false, bool StickyUsed = false, int l = 0, int c = 0)
+        : type(t), isConst(isconst) , isSticky(IsSticky), stickyUsed(StickyUsed) , value(std::move(v)), line(l), column(c) {}
 
 
 };
@@ -44,28 +46,21 @@ class AST {
  public:
     void startProgramTree();
     std::vector<std::unique_ptr<ASTNode>> args;
-    std::unique_ptr<ASTNode> makeString(const std::string& value);
-    std::unique_ptr<ASTNode> makeNumber(const std::string& value1);
-    std::unique_ptr<ASTNode> makeDouble(const std::string& value1);
-    std::unique_ptr<ASTNode> makeFloat(const std::string& value1);
-    std::unique_ptr<ASTNode> makeBool(const std::string& name);
-    std::unique_ptr<ASTNode> makeAny(const std::string& name);
+    std::unique_ptr<ASTNode> makeString(const std::string& value, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeNumber(const std::string& value1, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeDouble(const std::string& value1, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeFloat(const std::string& value1, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeBool(const std::string& name, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeAny(const std::string& name, int line = 0, int column = 0);
 
 
-    std::unique_ptr<ASTNode> makeIdentifier(const std::string& name);
-
-
-    std::unique_ptr<ASTNode> makeDeclaration(const std::string& name,  bool isConst, bool stickyUsed, bool isSticky);
-
-    std::unique_ptr<ASTNode> makeType(const std::string& name);
-
-    std::unique_ptr<ASTNode> makeBinaryOp(const std::string& op, std::unique_ptr<ASTNode> left, std::unique_ptr<ASTNode> right);
-
+    std::unique_ptr<ASTNode> makeIdentifier(const std::string& name, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeDeclaration(const std::string& name,  bool isConst, bool stickyUsed, bool isSticky, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeType(const std::string& name, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeBinaryOp(const std::string& op, std::unique_ptr<ASTNode> left, std::unique_ptr<ASTNode> right, int line = 0, int column = 0);
     void addChild(std::unique_ptr<ASTNode> child);
-
-    void addAssignment(const std::string& var, std::unique_ptr<ASTNode> expr);
-
-    void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false);
+    void addAssignment(const std::string& var, std::unique_ptr<ASTNode> expr, int line = 0, int column = 0);
+    void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false, int line = 0, int column = 0);
 
     void addFunctionArgument(std::unique_ptr<ASTNode> arg);
 

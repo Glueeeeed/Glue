@@ -21,7 +21,7 @@ class SemanticAnalyzer {
     void visitAssignment(const ASTNode* node);
     bool isCompatible(const std::string& declaredType, NodeType valueType);
     void declareSymbol(const ASTNode* node, bool isConst, bool stickyUsed, bool isSticky);
-    static void expect(std::string msg);
+    static void expect(std::string msg, int line = 0, int column = 0);
 
 
 
