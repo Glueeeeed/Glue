@@ -24,10 +24,6 @@ std::unique_ptr<ASTNode> AST::makeFloat(const std::string& value1) {
     return std::make_unique<ASTNode>(NodeType::NUMBER_FLOAT, value1);
 }
 
-// std::unique_ptr<ASTNode> AST::makeAny(const std::string& value1) {
-//     return std::make_unique<ASTNode>(NodeType::ANY, value1);
-// }
-
 std::unique_ptr<ASTNode> AST::makeIdentifier(const std::string& name) {
     return std::make_unique<ASTNode>(NodeType::IDENTIFIER, name);
 }
@@ -114,11 +110,4 @@ void AST::printAST(const ASTNode* node, int indent) {
     }
 }
 
-void AST::testAST(const ASTNode *node) {
-    std::cout << "TEST AST:" << std::endl;
-    if (node->children[0]->type == NodeType::DECLARATION) {
-        std::cout << "DEKLARACJA" << std::endl;
-        // std::cout << node->children[0]->children[0]->type == NodeType::NUMBER << std::endl;
-    }
 
-}

@@ -75,8 +75,8 @@ std::vector<Token> lexer(const char* input) {
         /*
          *  LATER!!
          *
-         *
-         *  ADD LOGICAL OPERATORS (==, >=, !=, +=)
+         * TODO: add += *= /= -=
+         * TODO: add increment and decrement token
          *
         */
 
@@ -91,9 +91,65 @@ std::vector<Token> lexer(const char* input) {
 
         if (c == '=') {
             int start_column = column;
-            tokens.push_back({TokenType::EQUALS, std::string(1, '='), line, start_column});
-            i++; column++;
+            if (i + 1 < len && content[i + 1] == '=') {
+                tokens.push_back({TokenType::EQUALS_EQUALS, "==", line, start_column});
+                i += 2;
+                column += 2;
+            } else {
+                tokens.push_back({TokenType::EQUALS, "=", line, start_column});
+                i++;
+                column++;
+            }
             continue;
+        }
+
+        if (c == '>') {
+            int start_column = column;
+            if (i + 1 < len && content[i + 1] == '=') {
+                tokens.push_back({TokenType::GREATER_EQUALS, ">=", line, start_column});
+                i += 2;
+                column += 2;
+            } else {
+                tokens.push_back({TokenType::GREATER, ">", line, start_column});
+                i++;
+                column++;
+            }
+        }
+
+        if (c == '!') {
+            int start_column = column;
+            if (i + 1 < len && content[i + 1] == '=') {
+                tokens.push_back({TokenType::NOT_EQUALS, "!=", line, start_column});
+                i += 2;
+                column += 2;
+            } else {
+                tokens.push_back({TokenType::NOT, "!", line, start_column});
+                i++;
+            }
+        }
+
+        if (c == '||') {
+            int start_column = column;
+            tokens.push_back({TokenType::OR, "||", line, start_column});
+            i++;
+        }
+
+        if (c == '&' && i + 1 < len && content[i + 1] == '&') {
+            int start_column = column;
+            tokens.push_back({TokenType::AND, "&&", line, start_column});
+            i++;
+        }
+
+        if (c == '<') {
+            int start_column = column;
+            if (i + 1 < len && content[i + 1] == '=') {
+                tokens.push_back({TokenType::LESS_EQUALS, "<=", line, start_column});
+                i += 2;
+                column += 2;
+            } else {
+                tokens.push_back({TokenType::LESS, "<", line, start_column});
+                i++;
+            }
         }
 
         if (c == '(') {
