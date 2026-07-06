@@ -67,8 +67,22 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
         NodeType leftType = inferType(node->children[0].get());
         NodeType rightType = inferType(node->children[1].get());
 
+        if (node->value == "/") {
+            if (node->children[1]->type == NodeType::NUMBER) {
+                if (node->children[1]->value == "0") {
+                    expect("Semantic Error: Division by zero", node->line, node->column);
+                }
+            }
+        }
+
+        if (leftType == NodeType::STRING || rightType == NodeType::STRING) {
+            expect("Semantic Error: Illegal Operation", node->line, node->column);
+        }
+
+
         if (leftType == NodeType::NUMBER_DOUBLE || rightType == NodeType::NUMBER_DOUBLE) return NodeType::NUMBER_DOUBLE;
         if (leftType == NodeType::NUMBER_FLOAT || rightType == NodeType::NUMBER_FLOAT) return NodeType::NUMBER_FLOAT;
+
         return NodeType::NUMBER;
     }
 
