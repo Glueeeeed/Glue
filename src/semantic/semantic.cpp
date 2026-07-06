@@ -68,8 +68,9 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
         NodeType rightType = inferType(node->children[1].get());
 
         if (node->value == "/") {
-            if (node->children[1]->type == NodeType::NUMBER) {
-                if (node->children[1]->value == "0") {
+            if (node->children[1]->type == NodeType::NUMBER || node->children[1]->type == NodeType::NUMBER_DOUBLE || node->children[1]->type == NodeType::NUMBER_FLOAT) {
+                double val = std::stod(node->children[1]->value);
+                if (val == 0.0) {
                     expect("Semantic Error: Division by zero", node->line, node->column);
                 }
             }

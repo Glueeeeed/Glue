@@ -9,6 +9,7 @@ struct SymbolInfo {
     std::string type;
     bool isConst = false;
     bool isSticky = false;
+    std::string value;
     mutable bool stickyUsed = false;
 };
 
