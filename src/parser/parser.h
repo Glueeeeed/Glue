@@ -32,8 +32,10 @@ class Parser {
         void  parseAssign();
         void  parseDeclaration();
         void  parseArgument();
-        void  parseExpression();
-        void  parseLiteral();
+        std::unique_ptr<ASTNode>  parseExpression();
+        std::unique_ptr<ASTNode>  parseAddition();
+        std::unique_ptr<ASTNode>  parseMultiplication();
+        std::unique_ptr<ASTNode> parseLiteral();
         void  parseFunctionCall();
         void parse();
         static void expect(std::string msg,  int line = 0, int column = 0);

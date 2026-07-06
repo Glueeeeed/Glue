@@ -44,7 +44,7 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
     std::string varName = idNode->value;
     std::string varTypeFormatted = "'" + typeNode->value + "'";
     std::string varType =  typeNode->value;
-    NodeType valueType = valNode->type;
+    NodeType valueType = inferType(valNode);
 
     if (symbols.count(varName)) {
         expect("Semantic Error: variable '" + varName + "' is already declared in this scope", idNode->line, idNode->column);
@@ -60,6 +60,32 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
 
 }
 
+
+NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
+
+    if (node->type == NodeType::BINARY_OPERATION) {
+        NodeType leftType = inferType(node->children[0].get());
+        NodeType rightType = inferType(node->children[1].get());
+
+        if (leftType == NodeType::NUMBER_DOUBLE || rightType == NodeType::NUMBER_DOUBLE) return NodeType::NUMBER_DOUBLE;
+        if (leftType == NodeType::NUMBER_FLOAT || rightType == NodeType::NUMBER_FLOAT) return NodeType::NUMBER_FLOAT;
+        return NodeType::NUMBER;
+    }
+
+    if (node->type == NodeType::IDENTIFIER) {
+        if (symbols.count(node->value)) {
+            std::string typeStr = symbols[node->value].type;
+            if (typeStr == "int") return NodeType::NUMBER;
+            if (typeStr == "double") return NodeType::NUMBER_DOUBLE;
+            if (typeStr == "float") return NodeType::NUMBER_FLOAT;
+            if (typeStr == "string") return NodeType::STRING;
+            if (typeStr == "bond") return NodeType::BOND;
+        }
+        return NodeType::BOND; // Unknown identifier or unknown type
+    }
+
+    return node->type;
+}
 
 bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType valueType) {
 
@@ -112,7 +138,7 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     const ASTNode* idNode   = node->children[0].get();
     const ASTNode* valNode = node->children[1].get();
     std::string varName = idNode->value;
-    NodeType valueType = valNode->type;
+    NodeType valueType = inferType(valNode);
 
 
     if (symbols.count(varName) == 0) {

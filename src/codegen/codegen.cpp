@@ -9,7 +9,6 @@
 void CodeGenerator::generateCode(const ASTNode *node) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
     module->setTargetTriple(llvm::Triple("x86_64-redhat-linux-gnu"));
-    // module->setTargetTriple(llvm::Triple("x86_64-w64-windows-gnu")); // Windows
 
     auto *mainType = llvm::FunctionType::get(builder.getInt32Ty(), false);
     currentFunction = llvm::Function::Create(
@@ -18,7 +17,6 @@ void CodeGenerator::generateCode(const ASTNode *node) {
         "main",
         module.get()
     );
-
 
     auto *entry = llvm::BasicBlock::Create(context, "entry", currentFunction);
     builder.SetInsertPoint(entry);
@@ -34,23 +32,16 @@ void CodeGenerator::generateCode(const ASTNode *node) {
     builder.SetInsertPoint(ExitBB);
     auto exitInfo = module->getOrInsertFunction("printf",llvm::FunctionType::get(builder.getInt32Ty(),{ llvm::PointerType::get(context, 0) },true));
     builder.CreateCall(exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit."));
-    auto *exit = llvm::FunctionType::get(builder.getInt32Ty(), false);
-    currentFunction = llvm::Function::Create(
-        exit,
-        llvm::Function::ExternalLinkage,
-        "getchar",
-        module.get()
-    );
-    builder.CreateCall(currentFunction);
+    
+    auto *getcharType = llvm::FunctionType::get(builder.getInt32Ty(), false);
+    auto getcharFunc = module->getOrInsertFunction("getchar", getcharType);
+    builder.CreateCall(getcharFunc);
     builder.CreateRet(builder.getInt32(0));
-
+    
     save();
 }
 
-
-
 void CodeGenerator::generate(const ASTNode *node) {
-
     if (!node) return;
 
     switch (node->type) {
@@ -68,11 +59,10 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::FUNCTION_CALL:
             visitFunction(node);
             break;
+        default:
+            break;
     }
-
-
 }
-
 
 void CodeGenerator::visitDeclaration(const ASTNode *node) {
     const ASTNode* idNode   = node->children[0].get();
@@ -80,37 +70,50 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
     const ASTNode* valNode  = node->children[2].get();
 
     std::string varName = idNode->value;
+    llvm::Value* val = visitExpression(valNode);
 
+    llvm::Type* ty = nullptr;
+    NodeType nt = NodeType::BOND;
     if (typeNode->value == "int") {
-        int value = std::stoi(valNode->value);
-        auto* allocaInst = createEntryAlloca(currentFunction, builder, builder.getInt32Ty(), varName);
-        builder.CreateStore(builder.getInt32(value), allocaInst);
-        namedValuesStruct& namedValueData = namedValues[varName];
-        namedValueData.nodeType = NodeType::NUMBER;
-        namedValueData.pointer = allocaInst;
+        ty = builder.getInt32Ty();
+        nt = NodeType::NUMBER;
+        if (val->getType()->isFloatingPointTy()) {
+            val = builder.CreateFPToSI(val, ty, "castit");
+        }
     } else if (typeNode->value == "double") {
-        double value = std::stod(valNode->value);
-        auto* allocaInst = createEntryAlloca(currentFunction, builder, builder.getDoubleTy(), varName);
-        builder.CreateStore(llvm::ConstantFP::get(context, llvm::APFloat(value)), allocaInst);
-        namedValuesStruct& namedValueData = namedValues[varName];
-        namedValueData.nodeType = NodeType::NUMBER_DOUBLE;
-        namedValueData.pointer = allocaInst;
+        ty = builder.getDoubleTy();
+        nt = NodeType::NUMBER_DOUBLE;
+        if (!val->getType()->isDoubleTy()) {
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPExt(val, ty, "castd");
+            } else {
+                val = builder.CreateSIToFP(val, ty, "castd");
+            }
+        }
     } else if (typeNode->value == "float") {
-        float value = std::stof(valNode->value);
-        auto* allocaInst = createEntryAlloca(currentFunction, builder, builder.getFloatTy(), varName);
-        builder.CreateStore(llvm::ConstantFP::get(context, llvm::APFloat(value)), allocaInst);
-        namedValuesStruct& namedValueData = namedValues[varName];
-        namedValueData.nodeType = NodeType::NUMBER_FLOAT;
-        namedValueData.pointer = allocaInst;
+        ty = builder.getFloatTy();
+        nt = NodeType::NUMBER_FLOAT;
+        if (!val->getType()->isFloatTy()) {
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPTrunc(val, ty, "castf");
+            } else {
+                val = builder.CreateSIToFP(val, ty, "castf");
+            }
+        }
     } else if (typeNode->value == "string") {
-        std::string value = valNode->value;
-        llvm::Value* heapPtr = createHeapString(value);
-        auto* allocaInst = builder.CreateAlloca(builder.getPtrTy(), nullptr, varName);
-        builder.CreateStore(heapPtr, allocaInst);
-        namedValuesStruct& namedValueData = namedValues[varName];
-        namedValueData.nodeType = NodeType::STRING;
-        namedValueData.pointer = allocaInst;
+        ty = builder.getPtrTy();
+        nt = NodeType::STRING;
+    } else {
+        expect("Codegen Error: unknown type '" + typeNode->value + "'");
+        return;
     }
+
+    auto* allocaInst = createEntryAlloca(currentFunction, builder, ty, varName);
+    builder.CreateStore(val, allocaInst);
+    
+    namedValuesStruct& namedValueData = namedValues[varName];
+    namedValueData.nodeType = nt;
+    namedValueData.pointer = allocaInst;
 }
 
 void CodeGenerator::visitAssignment(const ASTNode *node) {
@@ -118,85 +121,136 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
     const ASTNode* valNode  = node->children[1].get();
 
     std::string varName = idNode->value;
-    const namedValuesStruct& values = namedValues[varName];
-    NodeType nodeType = values.nodeType;
-    llvm::AllocaInst* ptr = values.pointer;
-        if (valNode->type == NodeType::NUMBER) {
-            int value = std::stoi(valNode->value);
-            builder.CreateStore(builder.getInt32(value), ptr);
-        } else if (valNode->type  == NodeType::NUMBER_DOUBLE) {
-            double value = std::stod(valNode->value);
-            builder.CreateStore(llvm::ConstantFP::get(builder.getDoubleTy(), value),ptr);
-        } else if (valNode->type == NodeType::NUMBER_FLOAT) {
-            float value = std::stof(valNode->value);
-            builder.CreateStore(llvm::ConstantFP::get(builder.getFloatTy(), value),ptr);
-        } else if (valNode->type == NodeType::STRING) {
-            std::string value = valNode->value;
-            newHeapString(value, ptr);
-        }
+    if (namedValues.count(varName) == 0) {
+        expect("Codegen Error: variable '" + varName + "' not found");
+    }
 
+    llvm::Value* val = visitExpression(valNode);
+    auto& var = namedValues[varName];
+
+    if (var.nodeType == NodeType::NUMBER) {
+        if (val->getType()->isFloatingPointTy()) {
+            val = builder.CreateFPToSI(val, builder.getInt32Ty(), "castit");
+        }
+    } else if (var.nodeType == NodeType::NUMBER_DOUBLE) {
+        if (!val->getType()->isDoubleTy()) {
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPExt(val, builder.getDoubleTy(), "castd");
+            } else {
+                val = builder.CreateSIToFP(val, builder.getDoubleTy(), "castd");
+            }
+        }
+    } else if (var.nodeType == NodeType::NUMBER_FLOAT) {
+        if (!val->getType()->isFloatTy()) {
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPTrunc(val, builder.getFloatTy(), "castf");
+            } else {
+                val = builder.CreateSIToFP(val, builder.getFloatTy(), "castf");
+            }
+        }
+    }
+
+    builder.CreateStore(val, var.pointer);
 }
 
-
 void CodeGenerator::visitFunction(const ASTNode* node) {
-
-    auto printfFunc = module->getOrInsertFunction("printf",llvm::FunctionType::get(builder.getInt32Ty(),{ llvm::PointerType::get(context, 0) },true));
+    auto printfFunc = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
     std::string format;
     std::vector<llvm::Value*> args;
 
-    size_t argStart = 0;
-    for (size_t i = argStart; i < node->children.size(); ++i) {
+    for (size_t i = 0; i < node->children.size(); ++i) {
         const ASTNode* arg = node->children[i].get();
         if (!arg) continue;
 
-        if (arg->type == NodeType::STRING) {
-            format += "%s";
-            args.push_back(builder.CreateGlobalString(arg->value));
-        } else if (arg->type == NodeType::NUMBER) {
+        llvm::Value* val = visitExpression(arg);
+        if (!val) continue;
+
+        llvm::Type* type = val->getType();
+        if (type->isIntegerTy()) {
             format += "%d";
-            args.push_back(builder.getInt32(std::stoi(arg->value)));
-        } else if (arg->type == NodeType::NUMBER_DOUBLE || arg->type == NodeType::NUMBER_FLOAT) {
+            args.push_back(val);
+        } else if (type->isDoubleTy()) {
             format += "%g";
-        }  else if (arg->type == NodeType::IDENTIFIER) {
-            auto it = namedValues.find(arg->value);
-            if (it == namedValues.end()) {
-                expect("Compilation error: Unknown variable: " + arg->value);
-            }
-            if (it->second.nodeType == NodeType::NUMBER) {
-                llvm::AllocaInst* alloca = it->second.pointer;
-                llvm::Value* loaded = builder.CreateLoad(builder.getInt32Ty(), alloca);
-                format += "%d";
-                args.push_back(loaded);
-            } else if (it->second.nodeType == NodeType::NUMBER_DOUBLE) {
-                llvm::AllocaInst* alloca = it->second.pointer;
-                llvm::Value* loaded = builder.CreateLoad(builder.getDoubleTy(), alloca);
-                format += "%g";
-                args.push_back(loaded);
-            } else if (it->second.nodeType == NodeType::NUMBER_FLOAT) {
-                llvm::AllocaInst* alloca = it->second.pointer;
-                llvm::Value* loaded = builder.CreateLoad(builder.getFloatTy(), alloca);
-                llvm::Value* as_double = builder.CreateFPExt(loaded, builder.getDoubleTy());
-                format += "%g";
-                args.push_back(as_double);
-            } else if (it->second.nodeType == NodeType::STRING) {
-                llvm::AllocaInst* alloca = it->second.pointer;
-                llvm::Value* loaded = builder.CreateLoad(builder.getPtrTy(), alloca);
-                format += "%s";
-                args.push_back(loaded);
-            }
-        } else {
-            expect("Compilation error: invalid argument format");
+            args.push_back(val);
+        } else if (type->isFloatTy()) {
+            format += "%g";
+            args.push_back(builder.CreateFPExt(val, builder.getDoubleTy()));
+        } else if (type->isPointerTy()) {
+            format += "%s";
+            args.push_back(val);
         }
     }
 
     format += "\n";
-
     llvm::Value* fmt = builder.CreateGlobalString(format);
     args.insert(args.begin(), fmt);
-
     builder.CreateCall(printfFunc, args);
+}
 
+llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
+    if (!node) return nullptr;
 
+    switch (node->type) {
+        case NodeType::NUMBER:
+            return builder.getInt32(std::stoi(node->value));
+        case NodeType::NUMBER_DOUBLE:
+            return llvm::ConstantFP::get(context, llvm::APFloat(std::stod(node->value)));
+        case NodeType::NUMBER_FLOAT:
+            return llvm::ConstantFP::get(context, llvm::APFloat(std::stof(node->value)));
+        case NodeType::STRING:
+            return createHeapString(node->value);
+        case NodeType::IDENTIFIER: {
+            if (namedValues.count(node->value)) {
+                auto var = namedValues[node->value];
+                llvm::Type* ty;
+                if (var.nodeType == NodeType::NUMBER) {
+                    ty = builder.getInt32Ty();
+                } else if (var.nodeType == NodeType::NUMBER_DOUBLE) {
+                    ty = builder.getDoubleTy();
+                } else if (var.nodeType == NodeType::NUMBER_FLOAT) {
+                    ty = builder.getFloatTy();
+                } else {
+                    ty = builder.getPtrTy();
+                }
+                return builder.CreateLoad(ty, var.pointer, node->value);
+            }
+            expect("Codegen Error: variable '" + node->value + "' not found");
+        }
+        case NodeType::BINARY_OPERATION: {
+            llvm::Value* L = visitExpression(node->children[0].get());
+            llvm::Value* R = visitExpression(node->children[1].get());
+            if (!L || !R) return nullptr;
+
+            bool isLFP = L->getType()->isFloatingPointTy();
+            bool isRFP = R->getType()->isFloatingPointTy();
+
+            if (isLFP && !isRFP) {
+                R = builder.CreateSIToFP(R, L->getType(), "promoter");
+            } else if (!isLFP && isRFP) {
+                L = builder.CreateSIToFP(L, R->getType(), "promotel");
+            } else if (isLFP && isRFP) {
+                if (L->getType()->isDoubleTy() && R->getType()->isFloatTy()) {
+                    R = builder.CreateFPExt(R, builder.getDoubleTy(), "promoter");
+                } else if (L->getType()->isFloatTy() && R->getType()->isDoubleTy()) {
+                    L = builder.CreateFPExt(L, builder.getDoubleTy(), "promotel");
+                }
+            }
+
+            bool isFP = L->getType()->isFloatingPointTy() || R->getType()->isFloatingPointTy();
+
+            if (node->value == "+") {
+                return isFP ? builder.CreateFAdd(L, R, "addtmp") : builder.CreateAdd(L, R, "addtmp");
+            } else if (node->value == "-") {
+                return isFP ? builder.CreateFSub(L, R, "subtmp") : builder.CreateSub(L, R, "subtmp");
+            } else if (node->value == "*") {
+                return isFP ? builder.CreateFMul(L, R, "multmp") : builder.CreateMul(L, R, "multmp");
+            } else if (node->value == "/") {
+                return isFP ? builder.CreateFDiv(L, R, "divtmp") : builder.CreateSDiv(L, R, "divtmp");
+            }
+        }
+        default:
+            return nullptr;
+    }
 }
 
 llvm::Value *CodeGenerator::createHeapString(std::string str) {
@@ -220,7 +274,6 @@ void CodeGenerator::newHeapString(std::string str, llvm::Value *type) {
     builder.CreateStore(value, type);
 }
 
-
 void CodeGenerator::save() {
     std::error_code EC;
     llvm::raw_fd_ostream out("temp.ll", EC);
@@ -230,18 +283,10 @@ void CodeGenerator::save() {
 
 void CodeGenerator::run() {
     system("clang temp.ll -o temp_exe && ./temp_exe");
-    // system("clang --target=x86_64-w64-windows-gnu temp.ll -o temp.exe"); // FOR WINDOWS
-
-
 }
-
-
 
 void CodeGenerator::expect(std::string msg) {
     std::stringstream stream;
     stream << msg << std::endl;
     throw ParseError(stream.str());
 }
-
-
-

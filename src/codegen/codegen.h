@@ -37,6 +37,7 @@ private:
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);
     void visitFunction(const ASTNode* node);
+    llvm::Value* visitExpression(const ASTNode* node);
 
     llvm::Value* createHeapString(std::string str);
     void newHeapString(std::string str, llvm::Value *type);

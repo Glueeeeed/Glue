@@ -1,0 +1,16 @@
+int a = 2 + 2 * 2;
+int b = (2 + 2) * 2;
+
+shout("Result A: ", a ," Result B: ", b);
+
+// if any is double, result is double.
+
+double c = 1.0 + 2.5f; // double
+// float d = 1.0f + 2.5; // error
+
+// If any is float, result is float.
+
+float e = 1.0f + 5; // float
+int f = 1 + 5.6f; // error
+
+

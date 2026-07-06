@@ -8,4 +8,4 @@ g*/
 
 sticky int x = 10;
 x = 20;  // OK
-x = 200; // Semantic error: 'x' can be assigned only once
+x = 200; // Semantic Error: variable 'x' is 'sticky' and has already been reassigned once at 11:1

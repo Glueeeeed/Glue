@@ -9,18 +9,61 @@
 #include "../semantic/semantic.h"
 
 
+std::unique_ptr<ASTNode> Parser::parseLiteral() {
+    Token token = currentToken();
+
+    if (token.type == TokenType::NUMBER) {
+        auto node = ast.makeNumber(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    } else if (token.type == TokenType::NUMBER_DOUBLE) {
+        auto node = ast.makeDouble(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    } else if (token.type == TokenType::NUMBER_FLOAT) {
+        auto node = ast.makeFloat(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    } else if (token.type == TokenType::STRING) {
+        auto node = ast.makeString(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    } else if (token.type == TokenType::BOOLEAN_TRUE || token.type == TokenType::BOOLEAN_FALSE) {
+        auto node = ast.makeBool(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    } else if (token.type == TokenType::IDENTIFIER) {
+        auto node = ast.makeIdentifier(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    } else if (token.type == TokenType::LPAREN) {
+        nextToken();
+        auto node = parseExpression();
+        if (currentToken().type != TokenType::RPAREN) {
+            expect("Syntax Error: expected ')'", currentToken().line, currentToken().column);
+        }
+        nextToken();
+        return node;
+    }
+
+    expect("Syntax Error: expected a literal or identifier", token.line, token.column);
+    return nullptr;
+}
+
 void Parser::parse() {
     if (tokenPos == 0) {
         ast.startProgramTree();
-     }
+    }
     Token cToken = currentToken();
     Token nextToken = peekToken();
     if (cToken.type == TokenType::IDENTIFIER && nextToken.type == TokenType::EQUALS) {
         parseAssign();
-    } else if (cToken.type == TokenType::TYPE || cToken.type == TokenType::KEYWORD && cToken.value == "const" || cToken.type == TokenType::KEYWORD && cToken.value == "sticky") {
+    } else if (cToken.type == TokenType::TYPE || cToken.type == TokenType::KEYWORD && cToken.value == "const" || cToken.
+               type == TokenType::KEYWORD && cToken.value == "sticky") {
         parseDeclaration();
     } else if (cToken.type == TokenType::IDENTIFIER && nextToken.type != TokenType::EQUALS) {
-        expect("Syntax Error: invalid or unexpected token after identifier '" + cToken.value + "'", currentToken().line, currentToken().column);
+        expect("Syntax Error: invalid or unexpected token after identifier '" + cToken.value + "'", currentToken().line,
+               currentToken().column);
     }
 
     if (cToken.type == TokenType::UNKNOWN) {
@@ -30,6 +73,38 @@ void Parser::parse() {
     if (cToken.type == TokenType::KEYWORD && nextToken.type == TokenType::LPAREN) {
         parseFunctionCall();
     }
+}
+
+std::unique_ptr<ASTNode> Parser::parseExpression() {
+    return parseAddition();
+}
+
+std::unique_ptr<ASTNode> Parser::parseAddition() {
+    auto left = parseMultiplication();
+
+    while (currentToken().type == TokenType::PLUS || currentToken().type == TokenType::MINUS) {
+        Token opToken = currentToken();
+        nextToken();
+
+        auto right = parseMultiplication();
+        left = ast.makeBinaryOp(opToken.value, std::move(left), std::move(right), opToken.line, opToken.column);
+    }
+
+    return left;
+}
+
+std::unique_ptr<ASTNode> Parser::parseMultiplication() {
+    auto left = parseLiteral();
+
+    while (currentToken().type == TokenType::MULTIPLY || currentToken().type == TokenType::DIVISION) {
+        Token opToken = currentToken();
+        nextToken();
+
+        auto right = parseLiteral();
+        left = ast.makeBinaryOp(opToken.value, std::move(left), std::move(right), opToken.line, opToken.column);
+    }
+
+    return left;
 }
 
 
@@ -47,35 +122,21 @@ void Parser::parseAssign() {
     }
     nextToken();
 
-    Token valToken = currentToken();
-    if (valToken.type != TokenType::NUMBER  && valToken.type != TokenType::NUMBER_DOUBLE  && valToken.type != TokenType::NUMBER_FLOAT && valToken.type != TokenType::STRING && valToken.type != TokenType::BOOLEAN_TRUE &&  valToken.type != TokenType::BOOLEAN_FALSE) {
-        expect("Syntax Error: expected a value (number, string, or boolean) after '='", valToken.line, valToken.column);
-    }
-    if (valToken.type == TokenType::NUMBER) {
-        ast.addAssignment(identifier, ast.makeNumber(valToken.value, valToken.line, valToken.column), idToken.line, idToken.column);
-    } else if (valToken.type == TokenType::NUMBER_DOUBLE) {
-        ast.addAssignment(identifier, ast.makeDouble(valToken.value, valToken.line, valToken.column), idToken.line, idToken.column);
-    } else if (valToken.type == TokenType::NUMBER_FLOAT) {
-        ast.addAssignment(identifier, ast.makeFloat(valToken.value, valToken.line, valToken.column), idToken.line, idToken.column);
-    } else if (valToken.type == TokenType::BOOLEAN_TRUE || valToken.type == TokenType::BOOLEAN_FALSE) {
-        ast.addAssignment(identifier, ast.makeBool(valToken.value, valToken.line, valToken.column), idToken.line, idToken.column);
-    } else {
-        ast.addAssignment(identifier, ast.makeString(valToken.value, valToken.line, valToken.column), idToken.line, idToken.column);
-    }
-    nextToken();
-    if (currentToken().type != TokenType::SEMICOLON) {
-        expect("Syntax Error: expected ';' after assignment to '" + identifier + "'", currentToken().line, currentToken().column);
-    }
+    auto expr = parseExpression();
+    ast.addAssignment(identifier, std::move(expr), idToken.line, idToken.column);
 
+    if (currentToken().type != TokenType::SEMICOLON) {
+        expect("Syntax Error: expected ';' after assignment to '" + identifier + "'", currentToken().line,
+               currentToken().column);
+    }
+    
     if (peekToken().type != TokenType::END_OF_FILE) {
         nextToken();
     }
     parse();
-
 }
 
 void Parser::parseDeclaration() {
-
     bool isConstant = false;
     bool isSticky = false;
     bool stickyUsed = false;
@@ -88,14 +149,17 @@ void Parser::parseDeclaration() {
     } else if (currentToken().type == TokenType::KEYWORD && currentToken().value == "sticky") {
         isSticky = true;
         nextToken();
-    } else if (currentToken().type == TokenType::KEYWORD && currentToken().value != "const" && currentToken().value != "sticky") {
-        expect("Syntax Error: unexpected keyword '" + currentToken().value + "'", currentToken().line, currentToken().column);
+    } else if (currentToken().type == TokenType::KEYWORD && currentToken().value != "const" && currentToken().value !=
+               "sticky") {
+        expect("Syntax Error: unexpected keyword '" + currentToken().value + "'", currentToken().line,
+               currentToken().column);
     }
 
     Token typeToken = currentToken();
     std::string type = typeToken.value;
     if (typeToken.type != TokenType::TYPE) {
-        expect("Syntax Error: expected a type name (e.g., int, string) in declaration", typeToken.line, typeToken.column);
+        expect("Syntax Error: expected a type name (e.g., int, string) in declaration", typeToken.line,
+               typeToken.column);
     }
     nextToken();
 
@@ -107,40 +171,29 @@ void Parser::parseDeclaration() {
     nextToken();
 
     if (currentToken().type != TokenType::EQUALS) {
-        expect("Syntax Error: expected '=' after identifier '" + identifier + "'", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected '=' after identifier '" + identifier + "'", currentToken().line,
+               currentToken().column);
     }
     nextToken();
 
-    Token valToken = currentToken();
-    if (valToken.type != TokenType::NUMBER  && valToken.type != TokenType::NUMBER_DOUBLE  && valToken.type != TokenType::NUMBER_FLOAT && valToken.type != TokenType::STRING && valToken.type != TokenType::BOOLEAN_TRUE &&  valToken.type != TokenType::BOOLEAN_FALSE) {
-        expect("Syntax Error: expected an initial value after '=' in declaration of '" + identifier + "'", valToken.line, valToken.column);
-    }
-    if (valToken.type == TokenType::NUMBER) {
-        ast.addDeclaration(identifier, ast.makeNumber(valToken.value, valToken.line, valToken.column), type, isConstant,  stickyUsed,  isSticky, declLine, declCol);
-    } else if (valToken.type == TokenType::NUMBER_DOUBLE) {
-        ast.addDeclaration(identifier, ast.makeDouble(valToken.value, valToken.line, valToken.column), type, isConstant, stickyUsed,  isSticky, declLine, declCol );
-    } else if (valToken.type == TokenType::NUMBER_FLOAT) {
-        ast.addDeclaration(identifier, ast.makeFloat(valToken.value, valToken.line, valToken.column), type, isConstant, stickyUsed,  isSticky, declLine, declCol);
-    } else if ( valToken.type == TokenType::BOOLEAN_TRUE || valToken.type == TokenType::BOOLEAN_FALSE) {
-        ast.addDeclaration(identifier, ast.makeBool(valToken.value, valToken.line, valToken.column), type, isConstant, stickyUsed,  isSticky, declLine, declCol);
-    } else if (valToken.type == TokenType::STRING) {
-        ast.addDeclaration(identifier, ast.makeString(valToken.value, valToken.line, valToken.column), type, isConstant, stickyUsed,  isSticky, declLine, declCol);
-    }
-    nextToken();
+    auto expr = parseExpression();
+    ast.addDeclaration(identifier, std::move(expr), type, isConstant, stickyUsed, isSticky, declLine, declCol);
+
     if (currentToken().type != TokenType::SEMICOLON) {
-        expect("Syntax Error: expected ';' at the end of declaration of '" + identifier + "'", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected ';' at the end of declaration of '" + identifier + "'", currentToken().line,
+               currentToken().column);
     }
 
     if (peekToken().type != TokenType::END_OF_FILE) {
         nextToken();
     }
     parse();
-
 }
 
 void Parser::parseFunctionCall() {
     if (currentToken().type != TokenType::KEYWORD) {
-        expect("Syntax Error: expected a keyword (like 'shout') to start a function call", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected a keyword (like 'shout') to start a function call", currentToken().line,
+               currentToken().column);
     } else {
         nextToken();
     }
@@ -168,21 +221,8 @@ void Parser::parseFunctionCall() {
 void Parser::parseArgument() {
     bool isEnd = false;
     while (!isEnd) {
-        Token valToken = currentToken();
-        if (valToken.type == TokenType::NUMBER) {
-            ast.addFunctionArgument(ast.makeNumber(valToken.value, valToken.line, valToken.column));
-        } else if (valToken.type == TokenType::STRING) {
-            ast.addFunctionArgument(ast.makeString(valToken.value, valToken.line, valToken.column));
-        } else if (valToken.type == TokenType::IDENTIFIER) {
-            ast.addFunctionArgument(ast.makeIdentifier(valToken.value, valToken.line, valToken.column));
-        } else if (valToken.type == TokenType::NUMBER_DOUBLE) {
-            ast.addFunctionArgument(ast.makeDouble(valToken.value, valToken.line, valToken.column));
-        } else if (valToken.type == TokenType::NUMBER_FLOAT) {
-            ast.addFunctionArgument(ast.makeFloat(valToken.value, valToken.line, valToken.column));
-        } else {
-            expect("Syntax Error: expected a valid expression as function argument", valToken.line, valToken.column);
-        }
-        nextToken();
+        auto expr = parseExpression();
+        ast.addFunctionArgument(std::move(expr));
 
         if (currentToken().type == TokenType::RPAREN) {
             nextToken();
@@ -191,16 +231,14 @@ void Parser::parseArgument() {
             if (currentToken().type == TokenType::COMMA) {
                 nextToken();
             } else {
-                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().line, currentToken().column);
+                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().line,
+                       currentToken().column);
             }
         }
-
-
     }
 
     std::string function = "shout";
     ast.addFunctionCall(function, std::move(ast.args));
-
 }
 
 
@@ -233,7 +271,6 @@ void Parser::printASTCall() {
     // ast.printAST(ast.getRoot()); // FOR DEBUG
     semantic.analyse(ast.getRoot());
     codegen.generateCode(ast.getRoot());
-
 }
 
 
@@ -242,5 +279,3 @@ void Parser::expect(std::string msg, int line, int column) {
     stream << msg << " at " << line << ":" << column << std::endl;
     throw ParseError(stream.str());
 }
-
-
