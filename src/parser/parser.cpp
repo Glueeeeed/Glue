@@ -76,7 +76,7 @@ void Parser::parse() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseExpression() {
-    return parseAddition();
+    return parseComparison();
 }
 
 std::unique_ptr<ASTNode> Parser::parseAddition() {
@@ -90,6 +90,19 @@ std::unique_ptr<ASTNode> Parser::parseAddition() {
         left = ast.makeBinaryOp(opToken.value, std::move(left), std::move(right), opToken.line, opToken.column);
     }
 
+    return left;
+}
+
+std::unique_ptr<ASTNode> Parser::parseComparison() {
+    auto left = parseAddition();
+
+    while (currentToken().type == TokenType::EQUALS_EQUALS || currentToken().type == TokenType::NOT_EQUALS ||currentToken().type == TokenType::GREATER ||currentToken().type == TokenType::GREATER_EQUALS ||currentToken().type == TokenType::LESS ||currentToken().type == TokenType::LESS_EQUALS) {
+        Token opToken = currentToken();
+        nextToken();
+
+        auto right = parseAddition();
+        left = ast.makeBinaryOp(opToken.value, std::move(left), std::move(right), opToken.line, opToken.column);
+    }
     return left;
 }
 

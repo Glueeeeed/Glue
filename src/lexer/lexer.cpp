@@ -114,6 +114,7 @@ std::vector<Token> lexer(const char* input) {
                 i++;
                 column++;
             }
+            continue;
         }
 
         if (c == '!') {
@@ -128,28 +129,30 @@ std::vector<Token> lexer(const char* input) {
             }
         }
 
-        if (c == '||') {
+        if (c == '|' && i + 1 < len && content[i + 1] == '|') {
             int start_column = column;
             tokens.push_back({TokenType::OR, "||", line, start_column});
-            i++;
+            i += 2; column += 2;
+            continue;
         }
 
         if (c == '&' && i + 1 < len && content[i + 1] == '&') {
             int start_column = column;
             tokens.push_back({TokenType::AND, "&&", line, start_column});
-            i++;
+            i += 2; column += 2;
+            continue;
         }
 
         if (c == '<') {
             int start_column = column;
             if (i + 1 < len && content[i + 1] == '=') {
                 tokens.push_back({TokenType::LESS_EQUALS, "<=", line, start_column});
-                i += 2;
-                column += 2;
+                i += 2; column += 2;
             } else {
                 tokens.push_back({TokenType::LESS, "<", line, start_column});
-                i++;
+                i++; column++;
             }
+            continue;
         }
 
         if (c == '(') {

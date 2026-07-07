@@ -18,6 +18,7 @@ enum class NodeType {
     NUMBER_DOUBLE,
     NUMBER_FLOAT,
     BOND,
+    BOOLEAN,
     TYPE,
     BINARY_OPERATION
 };

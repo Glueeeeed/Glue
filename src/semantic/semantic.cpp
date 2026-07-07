@@ -120,7 +120,7 @@ bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType va
         return true;
     }
 
-    if (declaredType == "bond" && valueType == NodeType::BOND) {
+    if (declaredType == "boolean" || declaredType == "bool" && valueType == NodeType::BOOLEAN) {
         return true;
     }
 

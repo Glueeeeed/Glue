@@ -18,7 +18,7 @@ std::unique_ptr<ASTNode> AST::makeDouble(const std::string& value1, int line, in
 }
 
 std::unique_ptr<ASTNode> AST::makeBool(const std::string& value1, int line, int column) {
-    return std::make_unique<ASTNode>(NodeType::BOND, value1, false, false, false, line, column);
+    return std::make_unique<ASTNode>(NodeType::BOOLEAN, value1, false, false, false, line, column);
 }
 std::unique_ptr<ASTNode> AST::makeFloat(const std::string& value1, int line, int column) {
     return std::make_unique<ASTNode>(NodeType::NUMBER_FLOAT, value1, false, false, false, line, column);

@@ -33,6 +33,7 @@ class Parser {
         void  parseDeclaration();
         void  parseArgument();
         std::unique_ptr<ASTNode>  parseExpression();
+        std::unique_ptr<ASTNode>  parseComparison();
         std::unique_ptr<ASTNode>  parseAddition();
         std::unique_ptr<ASTNode>  parseMultiplication();
         std::unique_ptr<ASTNode> parseLiteral();

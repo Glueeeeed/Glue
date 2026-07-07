@@ -103,6 +103,12 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
     } else if (typeNode->value == "string") {
         ty = builder.getPtrTy();
         nt = NodeType::STRING;
+    } else if (typeNode->value == "bool" || typeNode->value == "boolean") {
+        ty = builder.getInt1Ty();
+        nt = NodeType::BOOLEAN;
+        if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(1)) {
+            val = builder.CreateIsNotNull(val, "boolcast");
+        }
     } else {
         expect("Codegen Error: unknown type '" + typeNode->value + "'");
         return;
@@ -148,6 +154,10 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
                 val = builder.CreateSIToFP(val, builder.getFloatTy(), "castf");
             }
         }
+    } else if (var.nodeType == NodeType::BOOLEAN) {
+        if (!val->getType()->isIntegerTy(1)) {
+            val = builder.CreateIsNotNull(val, "boolcast");
+        }
     }
 
     builder.CreateStore(val, var.pointer);
@@ -166,7 +176,10 @@ void CodeGenerator::visitFunction(const ASTNode* node) {
         if (!val) continue;
 
         llvm::Type* type = val->getType();
-        if (type->isIntegerTy()) {
+        if (type->isIntegerTy(1)) {
+            format += "%d";
+            args.push_back(builder.CreateZExt(val, builder.getInt32Ty()));
+        } else if (type->isIntegerTy()) {
             format += "%d";
             args.push_back(val);
         } else if (type->isDoubleTy()) {
@@ -209,6 +222,8 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
                     ty = builder.getDoubleTy();
                 } else if (var.nodeType == NodeType::NUMBER_FLOAT) {
                     ty = builder.getFloatTy();
+                } else if (var.nodeType == NodeType::BOOLEAN) {
+                    ty = builder.getInt1Ty();
                 } else {
                     ty = builder.getPtrTy();
                 }
@@ -246,8 +261,22 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
                 return isFP ? builder.CreateFMul(L, R, "multmp") : builder.CreateMul(L, R, "multmp");
             } else if (node->value == "/") {
                 return isFP ? builder.CreateFDiv(L, R, "divtmp") : builder.CreateSDiv(L, R, "divtmp");
+            } else if (node->value == "==") {
+                return isFP ? builder.CreateFCmpOEQ(L, R, "cmptmp") : builder.CreateICmpEQ(L, R, "cmptmp");
+            } else if (node->value == "!=") {
+                return isFP ? builder.CreateFCmpONE(L, R, "cmptmp") : builder.CreateICmpNE(L, R, "cmptmp");
+            } else if (node->value == "<") {
+                return isFP ? builder.CreateFCmpOLT(L, R, "cmptmp") : builder.CreateICmpSLT(L, R, "cmptmp");
+            } else if (node->value == ">") {
+                return isFP ? builder.CreateFCmpOGT(L, R, "cmptmp") : builder.CreateICmpSGT(L, R, "cmptmp");
+            } else if (node->value == "<=") {
+                return isFP ? builder.CreateFCmpOLE(L, R, "cmptmp") : builder.CreateICmpSLE(L, R, "cmptmp");
+            } else if (node->value == ">=") {
+                return isFP ? builder.CreateFCmpOGE(L, R, "cmptmp") : builder.CreateICmpSGE(L, R, "cmptmp");
             }
         }
+        case NodeType::BOOLEAN:
+            return builder.getInt1(node->value == "true");
         default:
             return nullptr;
     }
