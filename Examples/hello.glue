@@ -15,7 +15,7 @@ double pi = 3.14159;
 shout(awesome);
 shout("Compilator version: ", version);
 shout("PI: ", pi);
-shout("PI is equal 3.15: ", pi == "0");
+shout("PI is equal 3.15: ", pi == 3.15);
 
 shout("2 * PI: ", 2 * pi);
 
