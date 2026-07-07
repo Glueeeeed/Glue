@@ -8,14 +8,16 @@ g*/
 
 const string awesome = "Glue is awesome!";
 int version = 1;
-double pi = 3.14;
-
+double pi = 3.14159;
 
 // Displaying Data using the shout function
 
 shout(awesome);
 shout("Compilator version: ", version);
 shout("PI: ", pi);
+shout("PI is equal 3.15: ", pi == "0");
+
+shout("2 * PI: ", 2 * pi);
 
 // Changing the value of a variable
 version = 2;

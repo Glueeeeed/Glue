@@ -33,6 +33,11 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::ASSIGNMENT:
             visitAssignment(node);
             break;
+        case NodeType::FUNCTION_CALL:
+            for (const auto& child : node->children) {
+                inferType(child.get());
+            }
+            break;
     }
 }
 
@@ -67,6 +72,11 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
         NodeType leftType = inferType(node->children[0].get());
         NodeType rightType = inferType(node->children[1].get());
 
+        if (leftType == NodeType::STRING || rightType == NodeType::STRING) {
+            std::string errorMsg = "Semantic Error: Operator '" + node->value +
+                                   "' is not supported for type 'string'";
+            expect(errorMsg, node->line, node->column);
+        }
         if (node->value == "/") {
             if (node->children[1]->type == NodeType::NUMBER || node->children[1]->type == NodeType::NUMBER_DOUBLE || node->children[1]->type == NodeType::NUMBER_FLOAT) {
                 double val = std::stod(node->children[1]->value);
@@ -76,9 +86,6 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
             }
         }
 
-        if (leftType == NodeType::STRING || rightType == NodeType::STRING) {
-            expect("Semantic Error: Illegal Operation", node->line, node->column);
-        }
 
 
         if (leftType == NodeType::NUMBER_DOUBLE || rightType == NodeType::NUMBER_DOUBLE) return NodeType::NUMBER_DOUBLE;

@@ -15,21 +15,15 @@ struct namedValuesStruct {
     NodeType nodeType;
 };
 
-// struct anyVariable {
-//     std::string name;
-//     NodeType valueType;
-//     bool isDeclared = true;
-// };
 
 class CodeGenerator {
 private:
 
-    llvm::LLVMContext context;
+    llvm::LLVMContext &context;
     std::unique_ptr<llvm::Module> module;
     llvm::IRBuilder<> builder;
 
     std::unordered_map<std::string, namedValuesStruct> namedValues;
-    // std::unordered_map<std::string, anyVariable> anyVariables;
     llvm::Function* printf = nullptr;
     llvm::Function* currentFunction = nullptr;
 
@@ -48,8 +42,8 @@ private:
     }
 
 public:
-    explicit CodeGenerator(llvm::LLVMContext &context)
-    : builder(context) {}
+    explicit CodeGenerator(llvm::LLVMContext &ctx)
+    : context(ctx), builder(context) {}
     void generateCode(const ASTNode* node);
     void generate(const ASTNode* node);
     void save();
