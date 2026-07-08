@@ -273,6 +273,10 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
                 return isFP ? builder.CreateFCmpOLE(L, R, "cmptmp") : builder.CreateICmpSLE(L, R, "cmptmp");
             } else if (node->value == ">=") {
                 return isFP ? builder.CreateFCmpOGE(L, R, "cmptmp") : builder.CreateICmpSGE(L, R, "cmptmp");
+            } if (node->value == "and") {
+                return builder.CreateAnd(L, R, "andtmp");
+            } else if (node->value == "or") {
+                return builder.CreateOr(L, R, "ortmp");
             }
         }
         case NodeType::BOOLEAN:
