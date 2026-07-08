@@ -28,12 +28,17 @@ using namespace std;
 //         case TokenType::DIVISION: return "DIVISION";
 //         case TokenType::NUMBER_DOUBLE: return "NUMBER_DOUBLE";
 //         case TokenType::NUMBER_FLOAT: return "NUMBER_FLOAT";
-//         case TokenType::BOND_TRUE: return "BOND_TRUE";
-//         case TokenType::BOND_FALSE: return "BOND_FALSE";
-//         case TokenType::BOND_TORN: return "BOND_TORN";
 //         case TokenType::COMMA: return "COMMA";
 //         case TokenType::LBRACE: return "LBRACE";
 //         case TokenType::RBRACE: return "RBRACE";
+//         case TokenType::BOOLEAN_TRUE: return "BOOLEAN_TRUE";
+//         case TokenType::BOOLEAN_FALSE: return "BOOLEAN_FALSE";
+//         case TokenType::GREATER: return "GREATER";
+//         case TokenType::LESS: return "LESS";
+//         case TokenType::EQUALS_EQUALS: return "EQUALS_EQUALS";
+//         case TokenType::NOT_EQUALS: return "NOT_EQUALS";
+//         case TokenType::GREATER_EQUALS: return "GREATER_EQUALS";
+//         case TokenType::LESS_EQUALS: return "LESS_EQUALS";
 //         case TokenType::END_OF_FILE: return "END_OF_FILE";
 //         case TokenType::UNKNOWN: return "UNKNOWN";
 //     }
@@ -59,10 +64,6 @@ int main(int argc, char* argv[]) {
     Parser parser(tokens, context);
     try {
         parser.parse();
-
-        // ONLY FOR DEBUG
-        // std::cout << "\n Abstract syntax Tree (AST):  \n" << std::endl;
-
         parser.printASTCall();
     } catch (const std::exception &e) {
         std::cerr << e.what() << '\n';

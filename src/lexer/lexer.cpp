@@ -127,6 +127,7 @@ std::vector<Token> lexer(const char* input) {
                 tokens.push_back({TokenType::NOT, "!", line, start_column});
                 i++;
             }
+            continue;
         }
 
         if (c == '|' && i + 1 < len && content[i + 1] == '|') {
