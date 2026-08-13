@@ -10,33 +10,7 @@ void CodeGenerator::generateCode(const ASTNode *node) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
     module->setTargetTriple(llvm::Triple("x86_64-redhat-linux-gnu"));
 
-    auto *mainType = llvm::FunctionType::get(builder.getInt32Ty(), false);
-    currentFunction = llvm::Function::Create(
-        mainType,
-        llvm::Function::ExternalLinkage,
-        "main",
-        module.get()
-    );
-
-    auto *entry = llvm::BasicBlock::Create(context, "entry", currentFunction);
-    builder.SetInsertPoint(entry);
-
-    llvm::BasicBlock* ExitBB = llvm::BasicBlock::Create(context, "exit", currentFunction);
-
     generate(node);
-
-    if (!entry->getTerminator()) {
-        builder.CreateBr(ExitBB);
-    }
-
-    builder.SetInsertPoint(ExitBB);
-    auto exitInfo = module->getOrInsertFunction("printf",llvm::FunctionType::get(builder.getInt32Ty(),{ llvm::PointerType::get(context, 0) },true));
-    builder.CreateCall(exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit."));
-    
-    auto *getcharType = llvm::FunctionType::get(builder.getInt32Ty(), false);
-    auto getcharFunc = module->getOrInsertFunction("getchar", getcharType);
-    builder.CreateCall(getcharFunc);
-    builder.CreateRet(builder.getInt32(0));
     
     save();
 }
@@ -46,8 +20,57 @@ void CodeGenerator::generate(const ASTNode *node) {
 
     switch (node->type) {
         case NodeType::PROGRAM:
+        case NodeType::BLOCK:
             for (const auto& child : node->children) {
                 generate(child.get());
+            }
+            break;
+        case NodeType::FUNCTION_DECLARATION: {
+            std::string funcName = node->value;
+            llvm::FunctionType *funcType = llvm::FunctionType::get(builder.getInt32Ty(), false);
+            
+            llvm::Function *func = llvm::Function::Create(
+                funcType, llvm::Function::ExternalLinkage, funcName, module.get());
+            
+            currentFunction = func;
+            namedValues.clear();
+
+            llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entry", func);
+            builder.SetInsertPoint(entry);
+
+            llvm::BasicBlock* ExitBB = nullptr;
+            if (funcName == "main") {
+                ExitBB = llvm::BasicBlock::Create(context, "exit", func);
+            }
+
+            for (const auto& child : node->children) {
+                if (child->type == NodeType::BLOCK) {
+                    generate(child.get());
+                }
+            }
+
+            if (funcName == "main") {
+                if (!builder.GetInsertBlock()->getTerminator()) {
+                    builder.CreateBr(ExitBB);
+                }
+
+                builder.SetInsertPoint(ExitBB);
+                auto exitInfo = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
+                builder.CreateCall(exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit.\n"));
+                
+                auto *getcharType = llvm::FunctionType::get(builder.getInt32Ty(), false);
+                auto getcharFunc = module->getOrInsertFunction("getchar", getcharType);
+                builder.CreateCall(getcharFunc);
+                builder.CreateRet(builder.getInt32(0));
+            } else if (!builder.GetInsertBlock()->getTerminator()) {
+                builder.CreateRet(builder.getInt32(0));
+            }
+            break;
+        }
+        case NodeType::RETURN_STATEMENT:
+            if (node->children.size() > 0) {
+                llvm::Value* retVal = visitExpression(node->children[0].get());
+                builder.CreateRet(retVal);
             }
             break;
         case NodeType::DECLARATION:
@@ -164,40 +187,57 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
 }
 
 void CodeGenerator::visitFunction(const ASTNode* node) {
-    auto printfFunc = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
-    std::string format;
-    std::vector<llvm::Value*> args;
+    std::string functionName = node->value;
 
-    for (size_t i = 0; i < node->children.size(); ++i) {
-        const ASTNode* arg = node->children[i].get();
-        if (!arg) continue;
+    if (functionName == "shout") {
+        auto printfFunc = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
+        std::string format;
+        std::vector<llvm::Value*> args;
 
-        llvm::Value* val = visitExpression(arg);
-        if (!val) continue;
+        for (size_t i = 0; i < node->children.size(); ++i) {
+            const ASTNode* arg = node->children[i].get();
+            if (!arg) continue;
 
-        llvm::Type* type = val->getType();
-        if (type->isIntegerTy(1)) {
-            format += "%d";
-            args.push_back(builder.CreateZExt(val, builder.getInt32Ty()));
-        } else if (type->isIntegerTy()) {
-            format += "%d";
-            args.push_back(val);
-        } else if (type->isDoubleTy()) {
-            format += "%g";
-            args.push_back(val);
-        } else if (type->isFloatTy()) {
-            format += "%g";
-            args.push_back(builder.CreateFPExt(val, builder.getDoubleTy()));
-        } else if (type->isPointerTy()) {
-            format += "%s";
-            args.push_back(val);
+            llvm::Value* val = visitExpression(arg);
+            if (!val) continue;
+
+            llvm::Type* type = val->getType();
+            if (type->isIntegerTy(1)) {
+                format += "%d";
+                args.push_back(builder.CreateZExt(val, builder.getInt32Ty()));
+            } else if (type->isIntegerTy()) {
+                format += "%d";
+                args.push_back(val);
+            } else if (type->isDoubleTy()) {
+                format += "%g";
+                args.push_back(val);
+            } else if (type->isFloatTy()) {
+                format += "%g";
+                args.push_back(builder.CreateFPExt(val, builder.getDoubleTy()));
+            } else if (type->isPointerTy()) {
+                format += "%s";
+                args.push_back(val);
+            }
         }
+
+        format += "\n";
+        llvm::Value* fmt = builder.CreateGlobalString(format);
+        args.insert(args.begin(), fmt);
+        builder.CreateCall(printfFunc, args);
+        return;
     }
 
-    format += "\n";
-    llvm::Value* fmt = builder.CreateGlobalString(format);
-    args.insert(args.begin(), fmt);
-    builder.CreateCall(printfFunc, args);
+    llvm::Function* callee = module->getFunction(functionName);
+    if (!callee) {
+        expect("Codegen Error: function '" + functionName + "' not found");
+    }
+
+    std::vector<llvm::Value*> args;
+    for (const auto& child : node->children) {
+        args.push_back(visitExpression(child.get()));
+    }
+
+    builder.CreateCall(callee, args);
 }
 
 llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {

@@ -54,24 +54,18 @@ void Parser::parse() {
     if (tokenPos == 0) {
         ast.startProgramTree();
     }
-    Token cToken = currentToken();
-    Token nextToken = peekToken();
-    if (cToken.type == TokenType::IDENTIFIER && nextToken.type == TokenType::EQUALS) {
-        parseAssign();
-    } else if (cToken.type == TokenType::TYPE || cToken.type == TokenType::KEYWORD && cToken.value == "const" || cToken.
-               type == TokenType::KEYWORD && cToken.value == "sticky") {
-        parseDeclaration();
-    } else if (cToken.type == TokenType::IDENTIFIER && nextToken.type != TokenType::EQUALS) {
-        expect("Syntax Error: invalid or unexpected token after identifier '" + cToken.value + "'", currentToken().line,
-               currentToken().column);
-    }
-
-    if (cToken.type == TokenType::UNKNOWN) {
-        expect("Syntax Error: unexpected token '" + cToken.value + "'", currentToken().line, currentToken().column);
-    }
-
-    if (cToken.type == TokenType::KEYWORD && nextToken.type == TokenType::LPAREN) {
-        parseFunctionCall();
+    
+    while (currentToken().type != TokenType::END_OF_FILE) {
+        Token cToken = currentToken();
+        Token nToken = peekToken();
+        
+        if (cToken.type == TokenType::KEYWORD && cToken.value == "func") {
+            parseFunctionDeclaration();
+        } else if (cToken.type == TokenType::UNKNOWN) {
+            expect("Syntax Error: unexpected token '" + cToken.value + "'", cToken.line, cToken.column);
+        } else {
+            expect("Syntax Error: Only function definitions allowed at global scope. Found: '" + cToken.value + "'", cToken.line, cToken.column);
+        }
     }
 }
 
@@ -143,7 +137,7 @@ std::unique_ptr<ASTNode> Parser::parseMultiplication() {
 }
 
 
-void Parser::parseAssign() {
+std::unique_ptr<ASTNode> Parser::parseAssign() {
     Token idToken = currentToken();
     std::string identifier = idToken.value;
     if (idToken.type != TokenType::IDENTIFIER) {
@@ -158,20 +152,139 @@ void Parser::parseAssign() {
     nextToken();
 
     auto expr = parseExpression();
-    ast.addAssignment(identifier, std::move(expr), idToken.line, idToken.column);
 
     if (currentToken().type != TokenType::SEMICOLON) {
         expect("Syntax Error: expected ';' after assignment to '" + identifier + "'", currentToken().line,
                currentToken().column);
     }
-    
-    if (peekToken().type != TokenType::END_OF_FILE) {
-        nextToken();
-    }
-    parse();
+    nextToken();
+
+    auto assign = std::make_unique<ASTNode>(NodeType::ASSIGNMENT, "", false, false, false, idToken.line, idToken.column);
+    assign->children.push_back(ast.makeIdentifier(identifier, idToken.line, idToken.column));
+    assign->children.push_back(std::move(expr));
+    return assign;
 }
 
-void Parser::parseDeclaration() {
+
+void Parser::parseFunctionDeclaration() {
+
+    nextToken();
+
+    Token typeToken = currentToken();
+    std::string returnType = typeToken.value;
+    if (typeToken.type != TokenType::TYPE) {
+        expect("Syntax Error: expected a type name after 'func'", typeToken.line, typeToken.column);
+    }
+    nextToken();
+
+    Token idToken = currentToken();
+    std::string funcName = idToken.value;
+    if (idToken.type != TokenType::IDENTIFIER) {
+        expect("Syntax Error: expected function name", idToken.line, idToken.column);
+    }
+    nextToken();
+
+    if (currentToken().type != TokenType::LPAREN) {
+        expect("Syntax Error: expected '(' after function name", currentToken().line, currentToken().column);
+    }
+    nextToken();
+
+    // TODO: logic parsing arguments
+
+
+    if (currentToken().type != TokenType::RPAREN) {
+        expect("Syntax Error: expected ')' after function arguments", currentToken().line, currentToken().column);
+    }
+    nextToken();
+
+
+    if (currentToken().type != TokenType::LBRACE) {
+        expect("Syntax Error: expected '{' to start function body", currentToken().line, currentToken().column);
+    }
+    nextToken();
+
+    auto body = std::make_unique<ASTNode>(NodeType::BLOCK);
+
+    while (currentToken().type != TokenType::RBRACE && currentToken().type != TokenType::END_OF_FILE) {
+        parseStatement(body.get());
+    }
+
+    if (currentToken().type != TokenType::RBRACE) {
+        expect("Syntax Error: expected '}' at the end of function", currentToken().line, currentToken().column);
+    }
+    nextToken();
+
+    ast.addFunctionDefinition(funcName, returnType, std::move(body));
+}
+
+
+void Parser::parseStatement(ASTNode* parentBlock) {
+    Token token = currentToken();
+
+    if (token.type == TokenType::LBRACE) {
+        nextToken();
+        auto blockNode = std::make_unique<ASTNode>(NodeType::BLOCK);
+        while (currentToken().type != TokenType::RBRACE && currentToken().type != TokenType::END_OF_FILE) {
+            parseStatement(blockNode.get());
+        }
+        if (currentToken().type != TokenType::RBRACE) {
+            expect("Syntax Error: expected '}' to close block", currentToken().line, currentToken().column);
+        }
+        nextToken();
+        parentBlock->children.push_back(std::move(blockNode));
+        return;
+    }
+
+    if (token.type == TokenType::KEYWORD && token.value == "return") {
+        nextToken();
+        auto expr = parseExpression();
+
+        auto retNode = std::make_unique<ASTNode>(NodeType::RETURN_STATEMENT);
+        retNode->children.push_back(std::move(expr));
+
+        if (currentToken().type != TokenType::SEMICOLON) {
+            expect("Syntax Error: expected ';' after return statement", currentToken().line, currentToken().column);
+        }
+        nextToken();
+
+        parentBlock->children.push_back(std::move(retNode));
+    } else if (token.type == TokenType::TYPE || (token.type == TokenType::KEYWORD && (token.value == "const" || token.value == "sticky"))) {
+        parentBlock->children.push_back(parseDeclaration());
+    } else if (token.type == TokenType::IDENTIFIER) {
+        if (peekToken().type == TokenType::EQUALS) {
+            parentBlock->children.push_back(parseAssign());
+        } else if (peekToken().type == TokenType::LPAREN) {
+            parentBlock->children.push_back(parseFunctionCall());
+        } else {
+            expect("Syntax Error: unexpected identifier in statement context", token.line, token.column);
+        }
+    } else if (token.type == TokenType::KEYWORD && (token.value == "Shout" || token.value == "shout")) {
+        parentBlock->children.push_back(parseFunctionCall());
+    } else if (token.type == TokenType::KEYWORD && token.value == "if") {
+
+        nextToken();
+
+        if (currentToken().type != TokenType::LPAREN) {
+            expect("Expected '(' after 'if'");
+        }
+
+        nextToken();
+        auto cond = parseExpression();
+
+        if (currentToken().type != TokenType::RPAREN) {
+            expect("Expected ')' after 'if' condition");
+        }
+
+        nextToken();
+        
+        parseStatement(parentBlock);
+    }
+    else {
+        expect("Syntax Error: unknown statement '" + token.value + "'", token.line, token.column);
+    }
+}
+
+std::unique_ptr<ASTNode> Parser::parseDeclaration() {
     bool isConstant = false;
     bool isSticky = false;
     bool stickyUsed = false;
@@ -184,10 +297,6 @@ void Parser::parseDeclaration() {
     } else if (currentToken().type == TokenType::KEYWORD && currentToken().value == "sticky") {
         isSticky = true;
         nextToken();
-    } else if (currentToken().type == TokenType::KEYWORD && currentToken().value != "const" && currentToken().value !=
-               "sticky") {
-        expect("Syntax Error: unexpected keyword '" + currentToken().value + "'", currentToken().line,
-               currentToken().column);
     }
 
     Token typeToken = currentToken();
@@ -212,45 +321,67 @@ void Parser::parseDeclaration() {
     nextToken();
 
     auto expr = parseExpression();
-    ast.addDeclaration(identifier, std::move(expr), type, isConstant, stickyUsed, isSticky, declLine, declCol);
 
     if (currentToken().type != TokenType::SEMICOLON) {
         expect("Syntax Error: expected ';' at the end of declaration of '" + identifier + "'", currentToken().line,
                currentToken().column);
     }
+    nextToken();
 
-    if (peekToken().type != TokenType::END_OF_FILE) {
-        nextToken();
-    }
-    parse();
+    auto decl = std::make_unique<ASTNode>(NodeType::DECLARATION, "", isConstant, isSticky, stickyUsed, declLine, declCol);
+    decl->children.push_back(ast.makeDeclaration(identifier, isConstant, stickyUsed, isSticky, idToken.line, idToken.column));
+    decl->children.push_back(ast.makeType(type, typeToken.line, typeToken.column));
+    decl->children.push_back(std::move(expr));
+    return decl;
 }
 
-void Parser::parseFunctionCall() {
-    if (currentToken().type != TokenType::KEYWORD) {
-        expect("Syntax Error: expected a keyword (like 'shout') to start a function call", currentToken().line,
-               currentToken().column);
-    } else {
-        nextToken();
+std::unique_ptr<ASTNode> Parser::parseFunctionCall() {
+    Token idToken = currentToken();
+    std::string functionName = idToken.value;
+    
+    if (idToken.type != TokenType::KEYWORD && idToken.type != TokenType::IDENTIFIER) {
+        expect("Syntax Error: expected a function name to start a function call", idToken.line,
+               idToken.column);
     }
-
+    nextToken();
 
     if (currentToken().type != TokenType::LPAREN) {
         expect("Syntax Error: expected '(' before function arguments", currentToken().line, currentToken().column);
-    } else {
-        nextToken();
     }
+    nextToken();
 
-    parseArgument();
+    std::vector<std::unique_ptr<ASTNode>> args;
+    if (currentToken().type != TokenType::RPAREN) {
+        bool isEnd = false;
+        while (!isEnd) {
+            args.push_back(parseExpression());
+
+            if (currentToken().type == TokenType::RPAREN) {
+                isEnd = true;
+            } else if (currentToken().type == TokenType::COMMA) {
+                nextToken();
+            } else {
+                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().line,
+                       currentToken().column);
+            }
+        }
+    }
+    
+    if (currentToken().type != TokenType::RPAREN) {
+        expect("Syntax Error: expected ')' after function arguments", currentToken().line, currentToken().column);
+    }
+    nextToken();
 
     if (currentToken().type != TokenType::SEMICOLON) {
         expect("Syntax Error: expected ';' after function call", currentToken().line, currentToken().column);
     }
+    nextToken();
 
-    if (peekToken().type != TokenType::END_OF_FILE) {
-        nextToken();
+    auto call = std::make_unique<ASTNode>(NodeType::FUNCTION_CALL, functionName, false, false, false, idToken.line, idToken.column);
+    for (auto &arg : args) {
+        call->children.push_back(std::move(arg));
     }
-
-    parse();
+    return call;
 }
 
 void Parser::parseArgument() {

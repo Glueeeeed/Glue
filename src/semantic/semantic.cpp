@@ -21,7 +21,23 @@ void SemanticAnalyzer::analyse(const ASTNode *root) {
 void SemanticAnalyzer::visit(const ASTNode* node) {
     if (!node) return;
     switch (node->type) {
-        case NodeType::PROGRAM:
+        case NodeType::PROGRAM: {
+            bool hasMain = false;
+            for (const auto& child : node->children) {
+                if (child->type == NodeType::FUNCTION_DECLARATION && child->value == "main") {
+                    hasMain = true;
+                }
+                visit(child.get());
+            }
+            if (!hasMain) {
+                expect("Semantic Error: Program must contain a 'main' function");
+            }
+            break;
+        }
+        case NodeType::FUNCTION_DECLARATION:
+            visitFunctionDeclaration(node);
+            break;
+        case NodeType::BLOCK:
             for (const auto& child : node->children) {
                 visit(child.get());
             }
@@ -29,7 +45,6 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::DECLARATION:
             visitDeclaration(node);
             break;
-
         case NodeType::ASSIGNMENT:
             visitAssignment(node);
             break;
@@ -37,6 +52,8 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
             for (const auto& child : node->children) {
                 inferType(child.get());
             }
+            break;
+        default:
             break;
     }
 }
@@ -188,6 +205,26 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 
     if (!isCompatible(declaredType, valueType)) {
         expect("Semantic Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + declaredType + "'", valNode->line, valNode->column);
+    }
+}
+
+void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
+    if (node->value == "main") {
+        bool endsWithReturn = false;
+        if (node->children.size() > 1 && node->children[1]->type == NodeType::BLOCK) {
+            const auto& block = node->children[1];
+            if (!block->children.empty() && block->children.back()->type == NodeType::RETURN_STATEMENT) {
+                endsWithReturn = true;
+            }
+        }
+        
+        if (!endsWithReturn) {
+            expect("Semantic Error: Function 'main' must end with a return statement (e.g., return 0;)", node->line, node->column);
+        }
+    }
+
+    for (const auto& child : node->children) {
+        visit(child.get());
     }
 }
 

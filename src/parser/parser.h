@@ -29,9 +29,11 @@ class Parser {
         Token currentToken() const;
         Token peekToken() const;
         Token nextToken();
-        void  parseAssign();
-        void  parseDeclaration();
+        std::unique_ptr<ASTNode>  parseAssign();
+        std::unique_ptr<ASTNode>  parseDeclaration();
         void  parseArgument();
+        void  parseFunctionDeclaration();
+        void parseStatement(ASTNode* parentBlock) ;
         std::unique_ptr<ASTNode>  parseExpression();
         std::unique_ptr<ASTNode>  parseComparison();
         std::unique_ptr<ASTNode>  parseLogicalOr();
@@ -39,7 +41,7 @@ class Parser {
         std::unique_ptr<ASTNode>  parseAddition();
         std::unique_ptr<ASTNode>  parseMultiplication();
         std::unique_ptr<ASTNode> parseLiteral();
-        void  parseFunctionCall();
+        std::unique_ptr<ASTNode>  parseFunctionCall();
         void parse();
         static void expect(std::string msg,  int line = 0, int column = 0);
         void printASTCall();

@@ -1,11 +1,17 @@
 /*g
-g
-g Sticky is a language feature that allows you to declare constant variables that can be changed only once.
-g
+
+ Sticky is a language feature that allows you to declare constant variables that can be changed only once.
+
 g*/
 
 
+func int main() {
 
-sticky int x = 10;
-x = 20;  // OK
-x = 200; // Semantic Error: variable 'x' is 'sticky' and has already been reassigned once at 11:1
+    sticky int x = 10;
+    x = 20;  // OK
+    x = 200; // Semantic Error: variable 'x' is 'sticky' and has already been reassigned once at 12:5
+
+    return 0;
+}
+
+

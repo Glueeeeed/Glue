@@ -20,6 +20,7 @@ class SemanticAnalyzer {
     void visit(const ASTNode* node);
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);
+    void visitFunctionDeclaration(const ASTNode* node);
     NodeType inferType(const ASTNode* node);
     bool isCompatible(const std::string& declaredType, NodeType valueType);
     void declareSymbol(const ASTNode* node, bool isConst, bool stickyUsed, bool isSticky);

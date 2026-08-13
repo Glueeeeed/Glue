@@ -1,24 +1,44 @@
 /*g
-g
-g Glue is a minimalist procedural programming language
-g
+
+ Glue is a minimalist procedural programming language
+
 g*/
 
-// Variables declaration
 
-const string awesome = "Glue is awesome!";
-int version = 1;
-double pi = 3.14159;
+// Custom function
+func void hello() {
+  shout("Hello World!");
+}
 
-// Displaying Data using the shout function
+// Main function
 
-shout(awesome);
-shout("Compilator version: ", version);
-shout("PI: ", pi);
-shout("PI is equal 3.15: ", pi == 3.15);
+func int main() {
 
-shout("2 * PI: ", 2 * pi);
+    hello();
 
-// Changing the value of a variable
-version = 2;
-shout("New version: ", version);
+  // Variables declaration
+    const string awesome = "Glue is awesome!";
+    int version = 1;
+    double pi = 3.14159;
+
+  // Displaying Data using the shout function
+
+    shout(awesome);
+    shout("Compilator version: ", version);
+    shout("PI: ", pi);
+    shout("PI is equal 3.15: ", pi == 3.15);
+
+    shout("2 * PI: ", 2 * pi);
+
+  // Changing the value of a variable
+    version = 2;
+    shout("New version: ", version);
+
+ // End of the program
+ // Return is required to exit the program
+    return 0;
+}
+
+
+
+
