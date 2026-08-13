@@ -22,7 +22,7 @@ private:
     llvm::LLVMContext &context;
     std::unique_ptr<llvm::Module> module;
     llvm::IRBuilder<> builder;
-
+    llvm::BasicBlock* currentExitBlock;
     std::unordered_map<std::string, namedValuesStruct> namedValues;
     llvm::Function* printf = nullptr;
     llvm::Function* currentFunction = nullptr;

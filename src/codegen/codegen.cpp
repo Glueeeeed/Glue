@@ -38,10 +38,11 @@ void CodeGenerator::generate(const ASTNode *node) {
             llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entry", func);
             builder.SetInsertPoint(entry);
 
-            llvm::BasicBlock* ExitBB = nullptr;
+
             if (funcName == "main") {
-                ExitBB = llvm::BasicBlock::Create(context, "exit", func);
+                this->currentExitBlock = llvm::BasicBlock::Create(context, "exit", func);
             }
+            llvm::BasicBlock* ExitBB = this->currentExitBlock;
 
             for (const auto& child : node->children) {
                 if (child->type == NodeType::BLOCK) {
@@ -50,25 +51,33 @@ void CodeGenerator::generate(const ASTNode *node) {
             }
 
             if (funcName == "main") {
-                if (!builder.GetInsertBlock()->getTerminator()) {
-                    builder.CreateBr(ExitBB);
+                if (auto *existingTerm = builder.GetInsertBlock()->getTerminator()) {
+                    existingTerm->eraseFromParent();
                 }
 
+                builder.CreateBr(ExitBB);
+
                 builder.SetInsertPoint(ExitBB);
+
                 auto exitInfo = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
                 builder.CreateCall(exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit.\n"));
-                
+
                 auto *getcharType = llvm::FunctionType::get(builder.getInt32Ty(), false);
                 auto getcharFunc = module->getOrInsertFunction("getchar", getcharType);
                 builder.CreateCall(getcharFunc);
+
                 builder.CreateRet(builder.getInt32(0));
-            } else if (!builder.GetInsertBlock()->getTerminator()) {
-                builder.CreateRet(builder.getInt32(0));
+            } else {
+                if (!builder.GetInsertBlock()->getTerminator()) {
+                    builder.CreateRet(builder.getInt32(0));
+                }
             }
             break;
         }
         case NodeType::RETURN_STATEMENT:
-            if (node->children.size() > 0) {
+            if (currentFunction->getName() == "main") {
+                builder.CreateBr(this->currentExitBlock);
+            } else if (node->children.size() > 0) {
                 llvm::Value* retVal = visitExpression(node->children[0].get());
                 builder.CreateRet(retVal);
             }
