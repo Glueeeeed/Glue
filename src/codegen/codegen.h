@@ -33,8 +33,9 @@ private:
     void visitFunction(const ASTNode* node);
     llvm::Value* visitExpression(const ASTNode* node);
 
-    llvm::Value* createHeapString(std::string str);
-    void newHeapString(std::string str, llvm::Value *type);
+    // void newHeapString(std::string str, llvm::Value *type);
+    // llvm::Value* createHeapString(std::string str);
+
     void expect(std::string msg);
     static llvm::AllocaInst* createEntryAlloca(llvm::Function* F, llvm::IRBuilder<> &B, llvm::Type* ty, const std::string &name) {
         llvm::IRBuilder<> tmp(&F->getEntryBlock(), F->getEntryBlock().begin());

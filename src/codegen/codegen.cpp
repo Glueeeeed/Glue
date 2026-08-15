@@ -260,7 +260,7 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
         case NodeType::NUMBER_FLOAT:
             return llvm::ConstantFP::get(context, llvm::APFloat(std::stof(node->value)));
         case NodeType::STRING:
-            return createHeapString(node->value);
+            return builder.CreateGlobalString(node->value);
         case NodeType::IDENTIFIER: {
             if (namedValues.count(node->value)) {
                 auto var = namedValues[node->value];
@@ -335,26 +335,28 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
     }
 }
 
-llvm::Value *CodeGenerator::createHeapString(std::string str) {
-    auto len = str.length();
-    auto* value = builder.getInt64Ty();
-    llvm::Constant* size = llvm::ConstantInt::get(value, len + 1);
 
-    llvm::DataLayout dataLayout = builder.GetInsertBlock()->getModule()->getDataLayout();
-    llvm::Type *intPtrTy = builder.getIntPtrTy(dataLayout);
+// llvm::Value *CodeGenerator::createHeapString(std::string str) {
+//     auto len = str.length();
+//     auto* value = builder.getInt64Ty();
+//     llvm::Constant* size = llvm::ConstantInt::get(value, len + 1);
+//
+//     llvm::DataLayout dataLayout = builder.GetInsertBlock()->getModule()->getDataLayout();
+//     llvm::Type *intPtrTy = builder.getIntPtrTy(dataLayout);
+//
+//     auto* ptr = builder.CreateMalloc(intPtrTy, value, size, nullptr);
+//     llvm::Constant* src = builder.CreateGlobalString(str + '\0');
+//     builder.CreateMemCpy(ptr, std::nullopt, src, std::nullopt, size);
+//     return ptr;
+// }
 
-    auto* ptr = builder.CreateMalloc(intPtrTy, value, size, nullptr);
-    llvm::Constant* src = builder.CreateGlobalString(str + '\0');
-    builder.CreateMemCpy(ptr, std::nullopt, src, std::nullopt, size);
-    return ptr;
-}
 
-void CodeGenerator::newHeapString(std::string str, llvm::Value *type) {
-    llvm::Value* oldPtr = builder.CreateLoad(builder.getPtrTy(), type);
-    builder.CreateFree(oldPtr);
-    llvm::Value* value = createHeapString(str);
-    builder.CreateStore(value, type);
-}
+// void CodeGenerator::newHeapString(std::string str, llvm::Value *type) {
+//     llvm::Value* oldPtr = builder.CreateLoad(builder.getPtrTy(), type);
+//     builder.CreateFree(oldPtr);
+//     llvm::Value* value = createHeapString(str);
+//     builder.CreateStore(value, type);
+// }
 
 void CodeGenerator::save() {
     std::error_code EC;
