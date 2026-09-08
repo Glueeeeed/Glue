@@ -1,6 +1,7 @@
 /*g
 
- Sticky is a language feature that allows you to declare constant variables that can be changed only once.
+Sticky is a language feature that allows you to declare variables
+that can be reassigned only once after initialization.
 
 g*/
 
