@@ -18,16 +18,16 @@ func int Main() {
         shout("Yes!!");
     }
 
-    string version = GetVersion();
-    const double pi = 3.14159;
-    sticky string awesome = "Glue is awesome!";
+    string Version = GetVersion();
+    const double Pi = 3.14159;
+    sticky string Awesome = "Glue is awesome!";
 
-    shout(awesome);
-    shout("Compilator version: ", version);
-    shout("PI: ", pi);
+    shout(Awesome);
+    shout("Compilator version: ", Version);
+    shout("PI: ", Pi);
 
-    awesome = "Glue is fast";
-    shout(awesome);
+    Awesome = "Glue is fast";
+    shout(Awesome);
 
 
     string DogName = "Pedro";
