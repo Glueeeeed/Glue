@@ -52,7 +52,6 @@ void Parser::parseFunctionDeclaration() {
         expect("Syntax Error: expected return type or function name after 'func'", typeOrIdToken.line, typeOrIdToken.column);
     }
 
-    std::cout << "Function name: " << funcName << std::endl;
 
     if (funcName == "Main") {
         funcName = "main";
@@ -476,7 +475,7 @@ Token Parser::nextToken() {
 }
 
 void Parser::printASTCall() {
-    ast.printAST(ast.getRoot()); // FOR DEBUG
+    // ast.printAST(ast.getRoot()); // FOR DEBUG
     semantic.analyse(ast.getRoot());
     codegen.generateCode(ast.getRoot());
 }
