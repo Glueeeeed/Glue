@@ -27,11 +27,30 @@ void CodeGenerator::generate(const ASTNode *node) {
             break;
         case NodeType::FUNCTION_DECLARATION: {
             std::string funcName = node->value;
-            llvm::FunctionType *funcType = llvm::FunctionType::get(builder.getInt32Ty(), false);
-            
+            std::string returnTypeName = (node->children.size() > 0 && node->children[0]->type == NodeType::TYPE)
+                                         ? node->children[0]->value
+                                         : "void";
+
+            llvm::Type* retType = builder.getVoidTy();
+            if (returnTypeName == "int") {
+                retType = builder.getInt32Ty();
+            } else if (returnTypeName == "string") {
+                retType = builder.getPtrTy();
+            } else if (returnTypeName == "bool" || returnTypeName == "boolean") {
+                retType = builder.getInt1Ty();
+            } else if (returnTypeName == "double") {
+                retType = builder.getDoubleTy();
+            } else if (returnTypeName == "float") {
+                retType = builder.getFloatTy();
+            } else if (returnTypeName == "void") {
+                retType = builder.getVoidTy();
+            }
+
+            llvm::FunctionType *funcType = llvm::FunctionType::get(retType, false);
+
             llvm::Function *func = llvm::Function::Create(
                 funcType, llvm::Function::ExternalLinkage, funcName, module.get());
-            
+
             currentFunction = func;
             namedValues.clear();
 
@@ -69,7 +88,15 @@ void CodeGenerator::generate(const ASTNode *node) {
                 builder.CreateRet(builder.getInt32(0));
             } else {
                 if (!builder.GetInsertBlock()->getTerminator()) {
-                    builder.CreateRet(builder.getInt32(0));
+                    if (currentFunction->getReturnType()->isVoidTy()) {
+                        builder.CreateRetVoid();
+                    } else if (currentFunction->getReturnType()->isIntegerTy(1)) {
+                        builder.CreateRet(builder.getInt1(false));
+                    } else if (currentFunction->getReturnType()->isPointerTy()) {
+                        builder.CreateRet(llvm::ConstantPointerNull::get(builder.getPtrTy()));
+                    } else {
+                        builder.CreateRet(builder.getInt32(0));
+                    }
                 }
             }
             break;
@@ -80,6 +107,8 @@ void CodeGenerator::generate(const ASTNode *node) {
             } else if (node->children.size() > 0) {
                 llvm::Value* retVal = visitExpression(node->children[0].get());
                 builder.CreateRet(retVal);
+            } else {
+                builder.CreateRetVoid();
             }
             break;
         case NodeType::DECLARATION:
@@ -195,7 +224,7 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
     builder.CreateStore(val, var.pointer);
 }
 
-void CodeGenerator::visitFunction(const ASTNode* node) {
+llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
     std::string functionName = node->value;
 
     if (functionName == "shout") {
@@ -232,8 +261,8 @@ void CodeGenerator::visitFunction(const ASTNode* node) {
         format += "\n";
         llvm::Value* fmt = builder.CreateGlobalString(format);
         args.insert(args.begin(), fmt);
-        builder.CreateCall(printfFunc, args);
-        return;
+        return builder.CreateCall(printfFunc, args);
+
     }
 
     llvm::Function* callee = module->getFunction(functionName);
@@ -246,7 +275,7 @@ void CodeGenerator::visitFunction(const ASTNode* node) {
         args.push_back(visitExpression(child.get()));
     }
 
-    builder.CreateCall(callee, args);
+    return builder.CreateCall(callee, args);
 }
 
 llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
@@ -330,6 +359,9 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
         }
         case NodeType::BOOLEAN:
             return builder.getInt1(node->value == "true");
+        case NodeType::FUNCTION_CALL: {
+            return visitFunction(node);
+        }
         default:
             return nullptr;
     }

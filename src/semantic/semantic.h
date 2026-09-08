@@ -15,6 +15,8 @@ struct SymbolInfo {
 
 class SemanticAnalyzer {
     std::unordered_map<std::string, SymbolInfo> symbols;
+    std::string currentFunctionReturnType;
+    std::string currentFunctionName;
     public:
     void analyse(const ASTNode* node);
     void visit(const ASTNode* node);

@@ -10,6 +10,7 @@ std::string nodeTypeToString(NodeType t) {
         case NodeType::STRING: return "'string'";
         case NodeType::NUMBER_FLOAT : return "'float'";
         case NodeType::BOND : return "'bond'";
+        case NodeType::BOOLEAN: return "'boolean'";
         default: return "unknown";
     }
 }
@@ -53,6 +54,23 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
                 inferType(child.get());
             }
             break;
+        case NodeType::RETURN_STATEMENT: {
+            if (currentFunctionReturnType == "void") {
+                if (!node->children.empty()) {
+                    expect("Semantic Error: Function '" + currentFunctionName + "' with return type 'void' cannot return a value", node->line, node->column);
+                }
+            } else {
+                if (node->children.empty()) {
+                    expect("Semantic Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' must return a value", node->line, node->column);
+                } else {
+                    NodeType retType = inferType(node->children[0].get());
+                    if (!isCompatible(currentFunctionReturnType, retType)) {
+                        expect("Semantic Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType), node->line, node->column);
+                    }
+                }
+            }
+            break;
+        }
         default:
             break;
     }
@@ -84,6 +102,20 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
 
 
 NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
+
+    if (node->type == NodeType::FUNCTION_CALL) {
+        if (symbols.count(node->value)) {
+            std::string typeStr = symbols[node->value].type;
+            if (typeStr == "int")  return NodeType::NUMBER;
+            if (typeStr == "double") return NodeType::NUMBER_DOUBLE;
+            if (typeStr == "float") return NodeType::NUMBER_FLOAT;
+            if (typeStr == "string") return NodeType::STRING;
+            if (typeStr == "bool" || typeStr == "boolean") return NodeType::BOOLEAN;
+
+
+        }
+        return NodeType::BOND;
+    }
 
     if (node->type == NodeType::BINARY_OPERATION) {
         NodeType leftType = inferType(node->children[0].get());
@@ -144,7 +176,7 @@ bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType va
         return true;
     }
 
-    if (declaredType == "boolean" || declaredType == "bool" && valueType == NodeType::BOOLEAN) {
+    if ((declaredType == "boolean" || declaredType == "bool") && valueType == NodeType::BOOLEAN) {
         return true;
     }
 
@@ -209,7 +241,38 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 }
 
 void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
+    std::string funcName = node->value;
+    std::string returnType = node->children[0]->value;
+    currentFunctionReturnType = returnType;
+    currentFunctionName = funcName;
+
+    SymbolInfo info;
+    info.type = returnType;
+    symbols[funcName] = info;
+
+
+    if (returnType != "void") {
+        bool endsWithReturn = false;
+        if (node->children.size() > 1 && node->children[1]->type == NodeType::BLOCK) {
+            const auto& block = node->children[1];
+            if (!block->children.empty() && block->children.back()->type == NodeType::RETURN_STATEMENT) {
+                endsWithReturn = true;
+            }
+        }
+        if (!endsWithReturn) {
+            expect("Semantic Error: Function '" + funcName + "' with return type '" + returnType + "' must return a value", node->line, node->column);
+        }
+    }
+
+
     if (node->value == "main") {
+
+
+        if (returnType != "int") {
+            expect("Semantic Error: 'main' function must return type 'int'", node->line, node->column);
+        }
+
+
         bool endsWithReturn = false;
         if (node->children.size() > 1 && node->children[1]->type == NodeType::BLOCK) {
             const auto& block = node->children[1];
