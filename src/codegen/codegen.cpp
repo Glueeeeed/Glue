@@ -48,6 +48,8 @@ void CodeGenerator::generate(const ASTNode *node) {
 
             llvm::FunctionType *funcType = llvm::FunctionType::get(retType, false);
 
+            funcName = funcName == "Main" ? "main" : funcName;
+
             llvm::Function *func = llvm::Function::Create(
                 funcType, llvm::Function::ExternalLinkage, funcName, module.get());
 
@@ -120,10 +122,52 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::FUNCTION_CALL:
             visitFunction(node);
             break;
+        case NodeType::IF_STATEMENT:
+            visitIfStatement(node);
+            break;
         default:
             break;
     }
 }
+
+void CodeGenerator::visitIfStatement(const ASTNode* node) {
+    llvm::Value* condVal = visitExpression(node->children[0].get());
+    if (!condVal) return;
+
+    if (condVal->getType()->isIntegerTy() && !condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateIsNotNull(condVal, "ifcond");
+    }
+
+    llvm::Function* func = builder.GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context, "then", func);
+    llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context, "else");
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "ifcont");
+
+    bool hasElse = node->children.size() > 2;
+
+    builder.CreateCondBr(condVal, thenBB, hasElse ? elseBB : mergeBB);
+
+    builder.SetInsertPoint(thenBB);
+    generate(node->children[1].get());
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(mergeBB);
+    }
+
+    if (hasElse) {
+        func->insert(func->end(), elseBB);
+        builder.SetInsertPoint(elseBB);
+        generate(node->children[2].get());
+        if (!builder.GetInsertBlock()->getTerminator()) {
+            builder.CreateBr(mergeBB);
+        }
+    }
+
+    func->insert(func->end(), mergeBB);
+    builder.SetInsertPoint(mergeBB);
+}
+
+
 
 void CodeGenerator::visitDeclaration(const ASTNode *node) {
     const ASTNode* idNode   = node->children[0].get();

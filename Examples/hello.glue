@@ -5,34 +5,36 @@
 g*/
 
 
-// Custom function
-func void hello() {
-  shout("Hello World!");
+func string GetVersion() {
+  return "0.1";
 }
 
-// Main function
 
-func int main() {
+func int Main() {
 
-    hello();
+    boolean GlueIsAwesome = true;
 
-  // Variables declaration
-    const string awesome = "Glue is awesome!";
-    int version = 1;
-    double pi = 3.14159;
+    if (GlueIsAwesome == true) {
+        shout("Yes!!");
+    }
 
-  // Displaying Data using the shout function
+    string version = GetVersion();
+    const double pi = 3.14159;
+    sticky string awesome = "Glue is awesome!";
 
     shout(awesome);
     shout("Compilator version: ", version);
     shout("PI: ", pi);
-    shout("PI is equal 3.15: ", pi == 3.15);
 
-    shout("2 * PI: ", 2 * pi);
+    awesome = "Glue is fast";
+    shout(awesome);
 
-  // Changing the value of a variable
-    version = 2;
-    shout("New version: ", version);
+
+    string DogName = "Pedro";
+    int DogAge = 2;
+
+    shout("Dog ", DogName, " has a 3 years old: ", DogAge == 3);
+
 
  // End of the program
  // Return is required to exit the program

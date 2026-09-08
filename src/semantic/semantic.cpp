@@ -25,7 +25,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::PROGRAM: {
             bool hasMain = false;
             for (const auto& child : node->children) {
-                if (child->type == NodeType::FUNCTION_DECLARATION && child->value == "main") {
+                if (child->type == NodeType::FUNCTION_DECLARATION && (child->value == "main" || child->value == "Main")) {
                     hasMain = true;
                 }
                 visit(child.get());
@@ -68,6 +68,19 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
                         expect("Semantic Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType), node->line, node->column);
                     }
                 }
+            }
+            break;
+        }
+        case NodeType::IF_STATEMENT: {
+            NodeType condType = inferType(node->children[0].get());
+            if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER) {
+                expect("Semantic Error: If statement condition must be of type boolean or number", node->line, node->column);
+            }
+
+            visit(node->children[1].get());
+
+            if (node->children.size() > 2) {
+                visit(node->children[2].get());
             }
             break;
         }
@@ -265,7 +278,7 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
     }
 
 
-    if (node->value == "main") {
+    if (node->value == "main" || node->value == "Main") {
 
 
         if (returnType != "int") {

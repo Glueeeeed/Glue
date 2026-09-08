@@ -51,6 +51,13 @@ void Parser::parseFunctionDeclaration() {
     } else {
         expect("Syntax Error: expected return type or function name after 'func'", typeOrIdToken.line, typeOrIdToken.column);
     }
+
+    std::cout << "Function name: " << funcName << std::endl;
+
+    if (funcName == "Main") {
+        funcName = "main";
+    }
+
     nextToken();
 
     if (currentToken().type != TokenType::LPAREN) {
@@ -148,22 +155,37 @@ void Parser::parseStatement(ASTNode* parentBlock) {
         nextToken();
     } else if (token.type == TokenType::KEYWORD && token.value == "if") {
 
+        int ifLine = token.line;
+        int ifCol = token.column;
         nextToken();
 
         if (currentToken().type != TokenType::LPAREN) {
-            expect("Expected '(' after 'if'");
+            expect("Syntax Error: expected '(' after 'if'", currentToken().line, currentToken().column);
         }
-
         nextToken();
-        auto cond = parseExpression();
+
+        auto condition = parseExpression();
 
         if (currentToken().type != TokenType::RPAREN) {
-            expect("Expected ')' after 'if' condition");
+            expect("Syntax Error: expected ')' after 'if' condition", currentToken().line, currentToken().column);
         }
-
         nextToken();
 
-        parseStatement(parentBlock);
+        auto ifNode = std::make_unique<ASTNode>(NodeType::IF_STATEMENT, "", false, false, false, ifLine, ifCol);
+        ifNode->children.push_back(std::move(condition));
+
+        auto thenBlock = std::make_unique<ASTNode>(NodeType::BLOCK);
+        parseStatement(thenBlock.get());
+        ifNode->children.push_back(std::move(thenBlock));
+
+        if (currentToken().type == TokenType::KEYWORD && currentToken().value == "else") {
+            nextToken();
+            auto elseBlock = std::make_unique<ASTNode>(NodeType::BLOCK);
+            parseStatement(elseBlock.get());
+            ifNode->children.push_back(std::move(elseBlock));
+        }
+
+        parentBlock->children.push_back(std::move(ifNode));
     }
     else {
         expect("Syntax Error: unknown statement '" + token.value + "'", token.line, token.column);

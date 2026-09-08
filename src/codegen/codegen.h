@@ -26,10 +26,10 @@ private:
     std::unordered_map<std::string, namedValuesStruct> namedValues;
     llvm::Function* printf = nullptr;
     llvm::Function* currentFunction = nullptr;
-
     void visit(const ASTNode* node);
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);
+    void visitIfStatement(const ASTNode* node);
     llvm::Value* visitFunction(const ASTNode* node);
     llvm::Value* visitExpression(const ASTNode* node);
 

@@ -108,6 +108,7 @@ void AST::printAST(const ASTNode* node, int indent) {
         case NodeType::NUMBER_DOUBLE: std::cout << "NUMBER_DOUBLE"; break;
         case NodeType::NUMBER_FLOAT: std::cout << "NUMBER_FLOAT"; break;
         case NodeType::BINARY_OPERATION: std::cout << "BINARY_OPERATION"; break;
+        case NodeType::IF_STATEMENT: std::cout << "IF_STATEMENT"; break;
         case NodeType::BOND: std::cout << "BOND"; break;
     }
 

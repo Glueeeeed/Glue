@@ -15,6 +15,7 @@ enum class NodeType {
     FUNCTION_DECLARATION,
     BLOCK,
     RETURN_STATEMENT,
+    IF_STATEMENT,
     IDENTIFIER,
     STRING,
     NUMBER,
