@@ -30,6 +30,7 @@ private:
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);
     void visitIfStatement(const ASTNode* node);
+    void visitWhileStatement(const ASTNode* node);
     llvm::Value* visitFunction(const ASTNode* node);
     llvm::Value* visitExpression(const ASTNode* node);
 

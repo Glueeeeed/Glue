@@ -1,0 +1,16 @@
+func int Main() {
+    int i = 0;
+    while (i < 1000000) {
+        i = i + 1;
+    }
+    return 0;
+}
+
+
+// BENCHMARKS
+
+// Glue 1.3ms
+// Cpp 1.3ms
+// C# 15.5ms
+// Python 49.7ms
+

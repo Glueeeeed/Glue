@@ -16,6 +16,7 @@ enum class NodeType {
     BLOCK,
     RETURN_STATEMENT,
     IF_STATEMENT,
+    WHILE_STATEMENT,
     IDENTIFIER,
     STRING,
     NUMBER,

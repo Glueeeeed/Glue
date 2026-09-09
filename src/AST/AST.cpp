@@ -98,6 +98,7 @@ void AST::printAST(const ASTNode* node, int indent) {
         case NodeType::FUNCTION_CALL: std::cout << "FUNCTION_CALL"; break;
         case NodeType::FUNCTION_DECLARATION: std::cout << "FUNCTION_DECLARATION"; break;
         case NodeType::BLOCK: std::cout << "BLOCK"; break;
+        case NodeType::WHILE_STATEMENT: std::cout << "WHILE_STATEMENT"; break;
         case NodeType::RETURN_STATEMENT: std::cout << "RETURN_STATEMENT"; break;
         case NodeType::IDENTIFIER: std::cout << "IDENTIFIER"; break;
         case NodeType::DECLARATION: std::cout << "DECLARATION"; break;

@@ -84,6 +84,15 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
             }
             break;
         }
+        case NodeType::WHILE_STATEMENT: {
+            NodeType condType = inferType(node->children[0].get());
+            if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER) {
+                expect("Semantic Error: While loop condition must be of type boolean or number", node->line, node->column);
+            }
+
+            visit(node->children[1].get());
+            break;
+        }
         default:
             break;
     }

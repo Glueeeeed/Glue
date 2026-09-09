@@ -185,8 +185,32 @@ void Parser::parseStatement(ASTNode* parentBlock) {
         }
 
         parentBlock->children.push_back(std::move(ifNode));
-    }
-    else {
+    }  else if (token.type == TokenType::KEYWORD && token.value == "while") {
+        int whileLine = token.line;
+        int whileCol = token.column;
+        nextToken();
+
+        if (currentToken().type != TokenType::LPAREN) {
+            expect("Syntax Error: expected '(' after 'while'", currentToken().line, currentToken().column);
+        }
+        nextToken();
+
+        auto condition = parseExpression();
+
+        if (currentToken().type != TokenType::RPAREN) {
+            expect("Syntax Error: expected ')' after 'while' condition", currentToken().line, currentToken().column);
+        }
+        nextToken();
+
+        auto whileNode = std::make_unique<ASTNode>(NodeType::WHILE_STATEMENT, "", false, false, false, whileLine, whileCol);
+        whileNode->children.push_back(std::move(condition));
+
+        auto bodyBlock = std::make_unique<ASTNode>(NodeType::BLOCK);
+        parseStatement(bodyBlock.get());
+        whileNode->children.push_back(std::move(bodyBlock));
+
+        parentBlock->children.push_back(std::move(whileNode));
+    } else {
         expect("Syntax Error: unknown statement '" + token.value + "'", token.line, token.column);
     }
 }

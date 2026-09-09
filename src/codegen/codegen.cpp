@@ -125,6 +125,9 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::IF_STATEMENT:
             visitIfStatement(node);
             break;
+        case NodeType::WHILE_STATEMENT:
+            visitWhileStatement(node);
+            break;
         default:
             break;
     }
@@ -165,6 +168,38 @@ void CodeGenerator::visitIfStatement(const ASTNode* node) {
 
     func->insert(func->end(), mergeBB);
     builder.SetInsertPoint(mergeBB);
+}
+
+
+void CodeGenerator::visitWhileStatement(const ASTNode* node) {
+    llvm::Function* func = builder.GetInsertBlock()->getParent();
+
+    llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context, "while.cond", func);
+    llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(context, "while.body");
+    llvm::BasicBlock* endBB  = llvm::BasicBlock::Create(context, "while.end");
+
+    builder.CreateBr(condBB);
+
+    builder.SetInsertPoint(condBB);
+    llvm::Value* condVal = visitExpression(node->children[0].get());
+    if (!condVal) return;
+
+    if (condVal->getType()->isIntegerTy() && !condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateIsNotNull(condVal, "whilecond");
+    }
+
+    builder.CreateCondBr(condVal, bodyBB, endBB);
+
+    func->insert(func->end(), bodyBB);
+    builder.SetInsertPoint(bodyBB);
+    generate(node->children[1].get());
+
+    if (!builder.GetInsertBlock()->getTerminator()) {
+        builder.CreateBr(condBB);
+    }
+
+    func->insert(func->end(), endBB);
+    builder.SetInsertPoint(endBB);
 }
 
 
@@ -436,13 +471,15 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
 
 void CodeGenerator::save() {
     std::error_code EC;
-    llvm::raw_fd_ostream out("temp.ll", EC);
+    llvm::raw_fd_ostream out("glue.ll", EC);
     module->print(out, nullptr);
     run();
 }
 
 void CodeGenerator::run() {
-    system("clang temp.ll -o temp_exe && ./temp_exe");
+    system("clang glue.ll -o glue_program && ./glue_exe");
+    // system("clang glue.ll -o glue_bench"); // BENCHMARKS
+
 }
 
 void CodeGenerator::expect(std::string msg) {
