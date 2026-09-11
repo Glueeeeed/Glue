@@ -1,0 +1,117 @@
+# Code Samples
+
+This section contains working code examples illustrating various features and idioms in the Glue programming language.
+
+---
+
+## 1. Complete Application (`hello.glue`)
+
+Demonstrates functions, `const` and `sticky` variables, loop iterations, and multi-argument `shout` logging.
+
+```glue
+/*g
+  Hello World and feature demo in Glue
+g*/
+
+func string getGreeting() {
+    return "Hello from Glue Language!";
+}
+
+func printDivider() {
+    shout("---------------------------------");
+    return;
+}
+
+func int main() {
+    printDivider();
+    shout(getGreeting());
+    printDivider();
+
+    const double PI = 3.14159;
+    sticky string status = "initialized";
+
+    shout("Math constant PI: ", PI);
+    shout("Initial status: ", status);
+
+    status = "running";
+    shout("Updated status: ", status);
+
+    int count = 0;
+    while (count < 3) {
+        shout("Iteration step: ", count);
+        count = count + 1;
+    }
+
+    printDivider();
+    return 0;
+}
+```
+
+---
+
+## 2. Sticky Variable Mutability (`sticky.glue`)
+
+Demonstrates how `sticky` variables permit exactly one reassignment after declaration.
+
+```glue
+func int main() {
+    sticky int port = 8080;
+    shout("Initial port: ", port);
+
+    // First reassignment is permitted:
+    port = 9000;
+    shout("Updated port: ", port);
+
+    // Uncommenting the following line will fail compilation:
+    // port = 9090; // Semantic error: variable 'port' is 'sticky' and has already been reassigned once
+
+    return 0;
+}
+```
+
+---
+
+## 3. Mathematical Operations & Comparisons (`expressions.glue`)
+
+Demonstrates operator precedence, boolean comparisons, and type promotion.
+
+```glue
+func int main() {
+    int a = 10;
+    int b = 20;
+    double factor = 2.5;
+
+    // Automatic type promotion (int + double -> double)
+    double result = a + b * factor;
+    shout("Calculated result: ", result);
+
+    bool isHigher = result > 50.0;
+    if (isHigher == true) {
+        shout("Result exceeds threshold.");
+    } else {
+        shout("Result is within threshold.");
+    }
+
+    return 0;
+}
+```
+
+---
+
+## 4. Benchmark Loop (`bench.glue`)
+
+Measures high-iteration loop performance compiled natively via LLVM.
+
+```glue
+func int main() {
+    int i = 0;
+    int max = 100000000;
+
+    while (i < max) {
+        i = i + 1;
+    }
+
+    shout("Iterations completed: ", i);
+    return 0;
+}
+```
