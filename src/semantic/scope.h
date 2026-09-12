@@ -7,6 +7,7 @@
 
 struct SymbolInfo {
     std::string type;
+    std::vector<std::string> args;
     bool isConst = false;
     bool isSticky = false;
     std::string value;

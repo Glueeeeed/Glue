@@ -64,7 +64,35 @@ void Parser::parseFunctionDeclaration() {
     }
     nextToken();
 
-    // TODO: logic parsing arguments
+    std::vector<std::pair<std::string, std::string>> params;
+
+    if (currentToken().type != TokenType::RPAREN) {
+        while (true) {
+            if (currentToken().type != TokenType::TYPE) {
+                expect("Syntax Error: expected parameter type", currentToken().line, currentToken().column);
+            }
+            std::string paramType = currentToken().value;
+            nextToken();
+
+            if (currentToken().type != TokenType::IDENTIFIER) {
+                expect("Syntax Error: expected parameter name", currentToken().line, currentToken().column);
+            }
+            std::string paramName = currentToken().value;
+            int pLine = currentToken().line;
+            int pCol = currentToken().column;
+            nextToken();
+
+            params.push_back({paramType, paramName});
+
+            if (currentToken().type == TokenType::COMMA) {
+                nextToken();
+            } else if (currentToken().type == TokenType::RPAREN) {
+                break;
+            } else {
+                expect("Syntax Error: expected ',' or ')' in parameter list", currentToken().line, currentToken().column);
+            }
+        }
+    }
 
 
     if (currentToken().type != TokenType::RPAREN) {
@@ -89,13 +117,25 @@ void Parser::parseFunctionDeclaration() {
     }
     nextToken();
 
-    ast.addFunctionDefinition(funcName, returnType, std::move(body));
+
+    auto paramsNode = std::make_unique<ASTNode>(NodeType::BLOCK);
+    for (const auto& [pType, pName] : params) {
+        auto pDecl = std::make_unique<ASTNode>(NodeType::PARAMETER, pName);
+        pDecl->children.push_back(ast.makeIdentifier(pName));
+        pDecl->children.push_back(ast.makeType(pType));
+        paramsNode->children.push_back(std::move(pDecl));
+    }
+
+
+    ast.addFunctionDefinition(funcName, returnType, std::move(paramsNode), std::move(body));
 }
 
 
 
 void Parser::parseStatement(ASTNode* parentBlock) {
     Token token = currentToken();
+
+
 
     if (token.type == TokenType::LBRACE) {
         nextToken();
@@ -210,6 +250,12 @@ void Parser::parseStatement(ASTNode* parentBlock) {
         whileNode->children.push_back(std::move(bodyBlock));
 
         parentBlock->children.push_back(std::move(whileNode));
+    }  else if (token.type == TokenType::KEYWORD && (token.value == "shout" || token.value == "Shout" || token.value == "shin")) {
+        parentBlock->children.push_back(parseFunctionCall());
+        if (currentToken().type != TokenType::SEMICOLON) {
+            expect("Syntax Error: expected ';' after function call", currentToken().line, currentToken().column);
+        }
+        nextToken();
     } else {
         expect("Syntax Error: unknown statement '" + token.value + "'", token.line, token.column);
     }
@@ -217,6 +263,16 @@ void Parser::parseStatement(ASTNode* parentBlock) {
 
 std::unique_ptr<ASTNode> Parser::parseLiteral() {
     Token token = currentToken();
+
+
+    if (token.type == TokenType::IDENTIFIER || (token.type == TokenType::KEYWORD && peekToken().type == TokenType::LPAREN)) {
+        if (peekToken().type == TokenType::LPAREN) {
+            return parseFunctionCall();
+        }
+        auto node = ast.makeIdentifier(token.value, token.line, token.column);
+        nextToken();
+        return node;
+    }
 
     if (token.type == TokenType::MINUS) {
         nextToken();
@@ -531,7 +587,7 @@ Token Parser::nextToken() {
 }
 
 void Parser::printASTCall() {
-    ast.printAST(ast.getRoot()); // FOR DEBUG
+    // ast.printAST(ast.getRoot()); // FOR DEBUG
     semantic.analyse(ast.getRoot());
     codegen.generateCode(ast.getRoot());
 }

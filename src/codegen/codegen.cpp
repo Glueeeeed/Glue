@@ -52,51 +52,103 @@ void CodeGenerator::generate(const ASTNode *node) {
             break;
         case NodeType::FUNCTION_DECLARATION: {
             std::string funcName = node->value;
-            std::string returnTypeName = (node->children.size() > 0 && node->children[0]->type == NodeType::TYPE)
+            funcName = (funcName == "Main") ? "main" : funcName;
+
+
+            std::string returnTypeName = (!node->children.empty() && node->children[0]->type == NodeType::TYPE)
                                          ? node->children[0]->value
                                          : "void";
 
-            llvm::Type* retType = builder.getVoidTy();
-            if (returnTypeName == "int") {
-                retType = builder.getInt32Ty();
-            } else if (returnTypeName == "string") {
-                retType = builder.getPtrTy();
-            } else if (returnTypeName == "bool" || returnTypeName == "boolean") {
-                retType = builder.getInt1Ty();
-            } else if (returnTypeName == "double") {
-                retType = builder.getDoubleTy();
-            } else if (returnTypeName == "float") {
-                retType = builder.getFloatTy();
-            } else if (returnTypeName == "void") {
-                retType = builder.getVoidTy();
+            auto getLLVMType = [&](const std::string& typeName) -> llvm::Type* {
+                if (typeName == "int") return builder.getInt32Ty();
+                if (typeName == "string") return builder.getPtrTy();
+                if (typeName == "bool" || typeName == "boolean") return builder.getInt1Ty();
+                if (typeName == "double") return builder.getDoubleTy();
+                if (typeName == "float") return builder.getFloatTy();
+                return builder.getVoidTy();
+            };
+
+            auto getNodeType = [&](const std::string& typeName) -> NodeType {
+                if (typeName == "int") return NodeType::NUMBER;
+                if (typeName == "double") return NodeType::NUMBER_DOUBLE;
+                if (typeName == "float") return NodeType::NUMBER_FLOAT;
+                if (typeName == "bool" || typeName == "boolean") return NodeType::BOOLEAN;
+                if (typeName == "string") return NodeType::STRING;
+                return NodeType::BOND;
+            };
+
+            llvm::Type* retType = getLLVMType(returnTypeName);
+
+            std::vector<llvm::Type*> paramTypes;
+            const ASTNode* paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
+
+            if (paramsNode) {
+                for (const auto& param : paramsNode->children) {
+                    std::string pType = param->children[1]->value;
+                    paramTypes.push_back(getLLVMType(pType));
+                }
             }
 
-            llvm::FunctionType *funcType = llvm::FunctionType::get(retType, false);
-
-            funcName = funcName == "Main" ? "main" : funcName;
+            llvm::FunctionType *funcType = llvm::FunctionType::get(retType, paramTypes, false);
 
             llvm::Function *func = llvm::Function::Create(
                 funcType, llvm::Function::ExternalLinkage, funcName, module.get());
 
             currentFunction = func;
 
-
             llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entry", func);
             builder.SetInsertPoint(entry);
 
+
+            // generate random seed for srand
+
+            if (funcName == "main") {
+                auto timeFunc = module->getOrInsertFunction("time", llvm::FunctionType::get(builder.getInt64Ty(), { builder.getPtrTy() }, false));
+                llvm::Value* nullPtr = llvm::ConstantPointerNull::get(builder.getPtrTy());
+                llvm::Value* timeVal = builder.CreateCall(timeFunc, { nullPtr });
+                llvm::Value* seedVal = builder.CreateTrunc(timeVal, builder.getInt32Ty());
+                auto srandFunc = module->getOrInsertFunction("srand", llvm::FunctionType::get(builder.getVoidTy(), { builder.getInt32Ty() }, false));
+                builder.CreateCall(srandFunc, { seedVal });
+            }
+
+
+            enterScope();
+
+
+            if (paramsNode) {
+                size_t idx = 0;
+                for (auto& arg : func->args()) {
+                    const auto& param = paramsNode->children[idx++];
+                    std::string pName = param->children[0]->value;
+                    std::string pType = param->children[1]->value;
+
+                    arg.setName(pName);
+
+                    llvm::Type* argLLVMType = getLLVMType(pType);
+                    llvm::AllocaInst* allocaInst = createEntryAlloca(func, builder, argLLVMType, pName);
+                    builder.CreateStore(&arg, allocaInst);
+
+                    namedValuesStack.back()[pName] = { allocaInst, getNodeType(pType) };
+                }
+            }
 
             if (funcName == "main") {
                 this->currentExitBlock = llvm::BasicBlock::Create(context, "exit", func);
             }
             llvm::BasicBlock* ExitBB = this->currentExitBlock;
 
-            for (const auto& child : node->children) {
-                if (child->type == NodeType::BLOCK) {
+            const ASTNode* bodyNode = node->children.back().get();
+            if (bodyNode && bodyNode->type == NodeType::BLOCK) {
+                for (const auto& child : bodyNode->children) {
                     generate(child.get());
                 }
             }
 
+            exitScope();
+
             if (funcName == "main") {
+
+
                 if (auto *existingTerm = builder.GetInsertBlock()->getTerminator()) {
                     existingTerm->eraseFromParent();
                 }
@@ -121,6 +173,10 @@ void CodeGenerator::generate(const ASTNode *node) {
                         builder.CreateRet(builder.getInt1(false));
                     } else if (currentFunction->getReturnType()->isPointerTy()) {
                         builder.CreateRet(llvm::ConstantPointerNull::get(builder.getPtrTy()));
+                    } else if (currentFunction->getReturnType()->isDoubleTy()) {
+                        builder.CreateRet(llvm::ConstantFP::get(builder.getDoubleTy(), 0.0));
+                    } else if (currentFunction->getReturnType()->isFloatTy()) {
+                        builder.CreateRet(llvm::ConstantFP::get(builder.getFloatTy(), 0.0f));
                     } else {
                         builder.CreateRet(builder.getInt32(0));
                     }
@@ -131,7 +187,7 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::RETURN_STATEMENT:
             if (currentFunction->getName() == "main") {
                 builder.CreateBr(this->currentExitBlock);
-            } else if (node->children.size() > 0) {
+            } else if (!node->children.empty()) {
                 llvm::Value* retVal = visitExpression(node->children[0].get());
                 builder.CreateRet(retVal);
             } else {
@@ -337,6 +393,53 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
 
 llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
     std::string functionName = node->value;
+
+
+    if (functionName == "shin") {
+        auto mallocFunc = module->getOrInsertFunction("malloc", llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false));
+        llvm::Value* buffer = builder.CreateCall(mallocFunc, { builder.getInt64(1024) });
+
+        auto scanfFunc = module->getOrInsertFunction("scanf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
+        llvm::Value* fmt = builder.CreateGlobalString("%1023s");
+        builder.CreateCall(scanfFunc, { fmt, buffer });
+
+        return buffer;
+    }
+
+    if (functionName == "toInt") {
+        llvm::Value* strVal = visitExpression(node->children[0].get());
+        auto atoiFunc = module->getOrInsertFunction("atoi", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, false));
+        return builder.CreateCall(atoiFunc, { strVal });
+    }
+
+    if (functionName == "toDouble") {
+        llvm::Value* strVal = visitExpression(node->children[0].get());
+        auto atofFunc = module->getOrInsertFunction("atof", llvm::FunctionType::get(builder.getDoubleTy(), { builder.getPtrTy() }, false));
+        return builder.CreateCall(atofFunc, { strVal });
+    }
+
+    if (functionName == "toFloat") {
+        llvm::Value* strVal = visitExpression(node->children[0].get());
+        auto atofFunc = module->getOrInsertFunction("atof", llvm::FunctionType::get(builder.getDoubleTy(), { builder.getPtrTy() }, false));
+        llvm::Value* dVal = builder.CreateCall(atofFunc, { strVal });
+        return builder.CreateFPTrunc(dVal, builder.getFloatTy());
+    }
+
+    if (functionName == "random") {
+        llvm::Value* minVal = visitExpression(node->children[0].get());
+        llvm::Value* maxVal = visitExpression(node->children[1].get());
+
+        auto randFunc = module->getOrInsertFunction("rand", llvm::FunctionType::get(builder.getInt32Ty(), false));
+        llvm::Value* r = builder.CreateCall(randFunc);
+
+        // range = (max - min) + 1
+        llvm::Value* diff = builder.CreateSub(maxVal, minVal);
+        llvm::Value* range = builder.CreateAdd(diff, builder.getInt32(1));
+
+        // result = min + (rand() % range)
+        llvm::Value* mod = builder.CreateSRem(r, range);
+        return builder.CreateAdd(minVal, mod);
+    }
 
     if (functionName == "shout") {
         auto printfFunc = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));

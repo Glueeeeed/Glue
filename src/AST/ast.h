@@ -16,6 +16,7 @@ enum class NodeType {
     BLOCK,
     RETURN_STATEMENT,
     IF_STATEMENT,
+    PARAMETER,
     WHILE_STATEMENT,
     IDENTIFIER,
     STRING,
@@ -65,7 +66,7 @@ class AST {
     void addChild(std::unique_ptr<ASTNode> child);
     void addAssignment(const std::string& var, std::unique_ptr<ASTNode> expr, int line = 0, int column = 0);
     void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false, int line = 0, int column = 0);
-    void addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> body);
+    void addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> params, std::unique_ptr<ASTNode> body);
     void addFunctionArgument(std::unique_ptr<ASTNode> arg);
 
     void addFunctionCall(std::string &name, std::vector<std::unique_ptr<ASTNode>> args);

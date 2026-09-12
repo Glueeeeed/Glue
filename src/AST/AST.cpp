@@ -64,9 +64,10 @@ void AST::addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, 
     addChild(std::move(assign));
 }
 
-void AST::addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> body) {
+void AST::addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> params, std::unique_ptr<ASTNode> body) {
     auto func = std::make_unique<ASTNode>(NodeType::FUNCTION_DECLARATION, name);
     func->children.push_back(makeType(returnType));
+    func->children.push_back(std::move(params));
     func->children.push_back(std::move(body));
     addChild(std::move(func));
 }

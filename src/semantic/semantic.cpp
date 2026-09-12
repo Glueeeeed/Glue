@@ -53,6 +53,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
             visitAssignment(node);
             break;
         case NodeType::FUNCTION_CALL:
+            visitFunctionCall(node);
             for (const auto& child : node->children) {
                 inferType(child.get());
             }
@@ -130,16 +131,23 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
 NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
 
     if (node->type == NodeType::FUNCTION_CALL) {
-        if (symbols.count(node->value)) {
-            std::string typeStr = symbols[node->value].type;
-            if (typeStr == "int")  return NodeType::NUMBER;
-            if (typeStr == "double") return NodeType::NUMBER_DOUBLE;
-            if (typeStr == "float") return NodeType::NUMBER_FLOAT;
-            if (typeStr == "string") return NodeType::STRING;
-            if (typeStr == "bool" || typeStr == "boolean") return NodeType::BOOLEAN;
+        visitFunctionCall(node);
 
+        if (node->value == "shin" || node->value == "listen" || node->value == "input") return NodeType::STRING;
+        if (node->value == "toInt" || node->value == "random") return NodeType::NUMBER;
+        if (node->value == "toDouble") return NodeType::NUMBER_DOUBLE;
+        if (node->value == "toFloat") return NodeType::NUMBER_FLOAT;
 
+        SymbolInfo* info = symbolTable.lookup(node->value);
+        if (info) {
+            if (info->type == "int") return NodeType::NUMBER;
+            if (info->type == "double") return NodeType::NUMBER_DOUBLE;
+            if (info->type == "float") return NodeType::NUMBER_FLOAT;
+            if (info->type == "string") return NodeType::STRING;
+            if (info->type == "bool" || info->type == "boolean") return NodeType::BOOLEAN;
         }
+
+        expect("Compile Error: undefined function '" + node->value + "'", node->line, node->column);
         return NodeType::BOND;
     }
 
@@ -261,6 +269,48 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     }
 }
 
+void SemanticAnalyzer::visitFunctionCall(const ASTNode* node) {
+    std::string funcName = node->value;
+
+
+    if (funcName == "random") {
+        if (node->children.size() != 2) {
+            expect("Compile Error: function '" + funcName + "' expects 2 arguments, but " + std::to_string(node->children.size()) + " were provided", node->line, node->column);
+            return;
+        }
+    }
+
+    if (funcName == "shout" || funcName == "shin"  || funcName == "random" || funcName == "toInt" || funcName == "toFloat" || funcName == "toDouble" ) {
+        return;
+    }
+
+
+
+    SymbolInfo* info = symbolTable.lookup(funcName);
+    if (!info) {
+        expect("Compile Error: function '" + funcName + "' is not declared", node->line, node->column);
+        return;
+    }
+
+    if (node->children.size() != info->args.size()) {
+        expect("Compile Error: function '" + funcName + "' expects " + std::to_string(info->args.size()) +
+               " arguments, but " + std::to_string(node->children.size()) + " were provided", node->line, node->column);
+        return;
+    }
+
+    for (size_t i = 0; i < node->children.size(); ++i) {
+        const auto* argNode = node->children[i].get();
+        NodeType inferredType = inferType(argNode);
+        const std::string& expectedType = info->args[i];
+
+        if (!isCompatible(expectedType, inferredType)) {
+            expect("Compile Error: argument " + std::to_string(i + 1) + " of function '" + funcName +
+                   "' is of type " + nodeTypeToString(inferredType) + ", but expected type is '" + expectedType + "'",
+                   argNode->line, argNode->column);
+        }
+    }
+}
+
 void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
     std::string funcName = node->value;
     std::string returnType = node->children[0]->value;
@@ -269,14 +319,23 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
 
     SymbolInfo info;
     info.type = returnType;
-    symbols[funcName] = info;
 
+    if (node->children.size() > 2) {
+        const ASTNode* paramsNode = node->children[1].get();
+        for (const auto& paramNode : paramsNode->children) {
+            std::string paramType = paramNode->children[1]->value; // children[1] to TYPE
+            info.args.push_back(paramType);
+        }
+    }
+
+    symbolTable.declare(funcName, info);
+
+    const ASTNode* bodyNode = node->children.back().get();
 
     if (returnType != "void") {
         bool endsWithReturn = false;
-        if (node->children.size() > 1 && node->children[1]->type == NodeType::BLOCK) {
-            const auto& block = node->children[1];
-            if (!block->children.empty() && block->children.back()->type == NodeType::RETURN_STATEMENT) {
+        if (bodyNode && bodyNode->type == NodeType::BLOCK) {
+            if (!bodyNode->children.empty() && bodyNode->children.back()->type == NodeType::RETURN_STATEMENT) {
                 endsWithReturn = true;
             }
         }
@@ -285,31 +344,43 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
         }
     }
 
-
     if (node->value == "main" || node->value == "Main") {
-
-
         if (returnType != "int") {
             expect("Compile Error: 'main' function must return type 'int'", node->line, node->column);
         }
-
-
         bool endsWithReturn = false;
-        if (node->children.size() > 1 && node->children[1]->type == NodeType::BLOCK) {
-            const auto& block = node->children[1];
-            if (!block->children.empty() && block->children.back()->type == NodeType::RETURN_STATEMENT) {
+        if (bodyNode && bodyNode->type == NodeType::BLOCK) {
+            if (!bodyNode->children.empty() && bodyNode->children.back()->type == NodeType::RETURN_STATEMENT) {
                 endsWithReturn = true;
             }
         }
-        
         if (!endsWithReturn) {
             expect("Compile Error: Function 'main' must end with a return statement (e.g., return 0;)", node->line, node->column);
         }
     }
 
-    for (const auto& child : node->children) {
-        visit(child.get());
+    symbolTable.enterScope();
+
+    if (node->children.size() > 2) {
+        const ASTNode* paramsNode = node->children[1].get();
+        for (const auto& param : paramsNode->children) {
+            std::string paramName = param->children[0]->value;
+            std::string paramType = param->children[1]->value;
+
+            SymbolInfo paramInfo;
+            paramInfo.type = paramType;
+            paramInfo.isConst = false;
+            paramInfo.isSticky = false;
+
+            if (!symbolTable.declare(paramName, paramInfo)) {
+                expect("Compile Error: redeclaration of parameter '" + paramName + "'", param->line, param->column);
+            }
+        }
     }
+
+    visit(bodyNode);
+
+    symbolTable.exitScope();
 }
 
 

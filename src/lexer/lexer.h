@@ -40,6 +40,7 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"and", TokenType::AND},
     {"or", TokenType::OR},
     {"shout", TokenType::KEYWORD},
+    {"shin", TokenType::KEYWORD},
     {"func", TokenType::KEYWORD},
     {"const", TokenType::KEYWORD},
     {"sticky", TokenType::KEYWORD},
