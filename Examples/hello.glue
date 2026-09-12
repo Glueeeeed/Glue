@@ -1,46 +1,35 @@
 /*g
-
- Glue is a minimalist procedural programming language
-
+  Hello World and feature demo in Glue
 g*/
 
-
-func string GetVersion() {
-  return "0.1";
+func string getGreeting() {
+    return "Hello from Glue Language!";
 }
 
+func printDivider() {
+    shout("---------------------------------");
+}
 
-func int Main() {
+func int main() {
+    printDivider();
+    shout(getGreeting());
+    printDivider();
 
-    boolean GlueIsAwesome = true;
+    const double PI = 3.14159;
+    sticky string status = "initialized";
 
-    if (GlueIsAwesome == true) {
-        shout("Yes!!");
+    shout("Math constant PI: ", PI);
+    shout("Initial status: ", status);
+
+    status = "running";
+    shout("Updated status: ", status);
+
+    int count = 0;
+    while (count < 3) {
+        shout("Iteration step: ", count);
+        count = count + 1;
     }
 
-    string Version = GetVersion();
-    const double Pi = 3.14159;
-    sticky string Awesome = "Glue is awesome!";
-
-    shout(Awesome);
-    shout("Compilator version: ", Version);
-    shout("PI: ", Pi);
-
-    Awesome = "Glue is fast";
-    shout(Awesome);
-
-
-    string DogName = "Pedro";
-    int DogAge = 2;
-
-    shout("Dog ", DogName, " has a 3 years old: ", DogAge == 3);
-
-
- // End of the program
- // Return is required to exit the program
+    printDivider();
     return 0;
 }
-
-
-
-

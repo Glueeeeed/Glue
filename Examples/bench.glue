@@ -1,16 +1,11 @@
-func int Main() {
+func int main() {
     int i = 0;
-    while (i < 1000000) {
+    int max = 1000000000;
+
+    while (i < max) {
         i = i + 1;
     }
+
+    shout("Iterations completed: ", i);
     return 0;
 }
-
-
-// BENCHMARKS
-
-// Glue 1.3ms
-// Cpp 1.3ms
-// C# 15.5ms
-// Python 49.7ms
-

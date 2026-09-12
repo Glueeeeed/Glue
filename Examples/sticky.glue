@@ -1,18 +1,13 @@
-/*g
-
-Sticky is a language feature that allows you to declare variables
-that can be reassigned only once after initialization.
-
-g*/
-
-
 func int main() {
+    sticky int port = 8080;
+    shout("Initial port: ", port);
 
-    sticky int x = 10;
-    x = 20;  // OK
-    x = 200; // Semantic Error: variable 'x' is 'sticky' and has already been reassigned once at 12:5
+    // First reassignment is permitted:
+    port = 9000;
+    shout("Updated port: ", port);
+
+    // Uncommenting the following line will fail compilation:
+    // port = 9090; // Compile Error: variable 'port' is 'sticky' and has already been reassigned once
 
     return 0;
 }
-
-

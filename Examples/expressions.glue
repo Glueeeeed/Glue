@@ -1,21 +1,18 @@
 func int main() {
-    int a = 2 + 2 * 2;
-    int b = (2 + 2) * 2;
+    int a = 10;
+    int b = 20;
+    double factor = 2.5;
 
-    shout("Result A: ", a ," Result B: ", b);
+    // Automatic type promotion (int + double -> double)
+    double result = a + b * factor;
+    shout("Calculated result: ", result);
 
-    // if any is double, result is double.
-
-    double c = 1.0 + 2.5f; // double
-    // float d = 1.0f + 2.5; // error
-
-    // If any is float, result is float.
-
-    float e = 1.0f + 5; // float
-    int f = 1 + 5.6f; // error
+    bool isHigher = result > 50.0;
+    if (isHigher == true) {
+        shout("Result exceeds threshold.");
+    } else {
+        shout("Result is within threshold.");
+    }
 
     return 0;
 }
-
-
-
