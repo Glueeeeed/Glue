@@ -5,10 +5,12 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 void CodeGenerator::generateCode(const ASTNode *node) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
-    module->setTargetTriple(llvm::Triple("x86_64-redhat-linux-gnu"));
+    module->setTargetTriple(llvm::Triple(llvm::sys::getDefaultTargetTriple()));
 
     generate(node);
     
@@ -477,7 +479,11 @@ void CodeGenerator::save() {
 }
 
 void CodeGenerator::run() {
+#if defined(_WIN32) || defined(_WIN64)
+    system("clang glue.ll -o glue_program.exe && glue_program.exe");
+#else
     system("clang glue.ll -o glue_program && ./glue_program");
+#endif
     // system("clang glue.ll -o glue_bench"); // BENCHMARKS
 
 }
