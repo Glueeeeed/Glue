@@ -13,10 +13,6 @@ func int add(int a, int b) {
     return a + b;
 }
 
-func string greet(string name) {
-    return "Hello, " + name;
-}
-
 // Omitting the return type defaults to void:
 func printDivider() {
     shout("==========================");
@@ -43,11 +39,8 @@ At code generation time, the compiler automatically handles the `main` entry poi
 - Injects a completion message `Program completed successfully. Press Enter to exit.`.
 - Injects a `getchar()` call to prevent immediate terminal termination on execution.
 - Returns `0` to the operating system.
-  :::
+:::
 
----
-
-## Standard I/O & Built-in Functions
 
 Glue provides built-in functions for console input/output, random number generation, and type conversions:
 
@@ -93,5 +86,5 @@ shout("Doubled: ", parsedNumber * 2);
    Functions should be declared before they are called, or defined at top-level.
 2. **Scoping**:
    Function parameters and local variables are scoped to the function body.
-   :::
-```
+
+:::
