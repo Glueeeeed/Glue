@@ -1,3 +1,3 @@
 Welcome to Glue is a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
 
-Docs: https://app.gluechat.dev:8080
+Docs: [Glue Documentation](https://app.gluechat.dev:8080)
