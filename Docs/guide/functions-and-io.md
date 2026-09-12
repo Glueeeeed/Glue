@@ -13,15 +13,13 @@ func string getAppName() {
     return "Glue Engine";
 }
 
-func void logStartup() {
+func logStartup() {
     shout("Starting application...");
-    return;
 }
 
 // Omitting the return type defaults to void:
 func printDivider() {
     shout("==========================");
-    return;
 }
 ```
 

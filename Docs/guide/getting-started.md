@@ -1,6 +1,6 @@
 # Getting Started with Glue
 
-Welcome to **Glue** — a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
+Welcome to **Glue** is a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
 
 This guide walks you through installing dependencies, building the Glue compiler from source, and compiling your first program on **Linux**, **macOS**, and **Windows**.
 

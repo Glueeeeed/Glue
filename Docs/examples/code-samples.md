@@ -19,7 +19,6 @@ func string getGreeting() {
 
 func printDivider() {
     shout("---------------------------------");
-    return;
 }
 
 func int main() {

@@ -1,10 +1,10 @@
 {
   "devDependencies": {
-    "vitepress": "^2.0.0-alpha.20"
+    "vitepress": "^1.0.0"
   },
   "scripts": {
-    "docs:dev": "../node_modules/.bin/vitepress dev Glue/Docs",
-    "docs:build": "../node_modules/.bin/vitepress build Glue/Docs",
-    "docs:preview": "../node_modules/.bin/vitepress preview Glue/Docs"
+    "docs:dev": "vitepress dev Docs",
+    "docs:build": "vitepress build Docs",
+    "docs:preview": "vitepress preview Docs"
   }
 }
