@@ -218,34 +218,59 @@ void Parser::parseStatement(ASTNode* parentBlock) {
 std::unique_ptr<ASTNode> Parser::parseLiteral() {
     Token token = currentToken();
 
+    if (token.type == TokenType::MINUS) {
+        nextToken();
+        auto operand = parseLiteral();
+        auto zeroNode = ast.makeNumber("0", token.line, token.column);
+        return ast.makeBinaryOp("-", std::move(zeroNode), std::move(operand), token.line, token.column);
+    }
+
+    if (token.type == TokenType::PLUS) {
+        nextToken();
+        return parseLiteral();
+    }
+
+
     if (token.type == TokenType::NUMBER) {
         auto node = ast.makeNumber(token.value, token.line, token.column);
         nextToken();
         return node;
-    } else if (token.type == TokenType::NUMBER_DOUBLE) {
+    }
+
+    if (token.type == TokenType::NUMBER_DOUBLE) {
         auto node = ast.makeDouble(token.value, token.line, token.column);
         nextToken();
         return node;
-    } else if (token.type == TokenType::NUMBER_FLOAT) {
+    }
+
+    if (token.type == TokenType::NUMBER_FLOAT) {
         auto node = ast.makeFloat(token.value, token.line, token.column);
         nextToken();
         return node;
-    } else if (token.type == TokenType::STRING) {
+    }
+
+    if (token.type == TokenType::STRING) {
         auto node = ast.makeString(token.value, token.line, token.column);
         nextToken();
         return node;
-    } else if (token.type == TokenType::BOOLEAN_TRUE || token.type == TokenType::BOOLEAN_FALSE) {
+    }
+
+    if (token.type == TokenType::BOOLEAN_TRUE || token.type == TokenType::BOOLEAN_FALSE) {
         auto node = ast.makeBool(token.value, token.line, token.column);
         nextToken();
         return node;
-    } else if (token.type == TokenType::IDENTIFIER) {
+    }
+
+    if (token.type == TokenType::IDENTIFIER) {
         if (peekToken().type == TokenType::LPAREN) {
             return parseFunctionCall();
         }
         auto node = ast.makeIdentifier(token.value, token.line, token.column);
         nextToken();
         return node;
-    } else if (token.type == TokenType::LPAREN) {
+    }
+
+    if (token.type == TokenType::LPAREN) {
         nextToken();
         auto node = parseExpression();
         if (currentToken().type != TokenType::RPAREN) {
@@ -499,7 +524,7 @@ Token Parser::nextToken() {
 }
 
 void Parser::printASTCall() {
-    // ast.printAST(ast.getRoot()); // FOR DEBUG
+    ast.printAST(ast.getRoot()); // FOR DEBUG
     semantic.analyse(ast.getRoot());
     codegen.generateCode(ast.getRoot());
 }
