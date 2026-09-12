@@ -225,6 +225,13 @@ std::unique_ptr<ASTNode> Parser::parseLiteral() {
         return ast.makeBinaryOp("-", std::move(zeroNode), std::move(operand), token.line, token.column);
     }
 
+    if (token.type == TokenType::NOT) {
+        nextToken();
+        auto operand = parseLiteral();
+        auto falseNode = ast.makeBool("false", token.line, token.column);
+        return ast.makeBinaryOp("==", std::move(operand), std::move(falseNode), token.line, token.column);
+    }
+
     if (token.type == TokenType::PLUS) {
         nextToken();
         return parseLiteral();

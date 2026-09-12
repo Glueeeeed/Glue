@@ -76,7 +76,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         }
         case NodeType::IF_STATEMENT: {
             NodeType condType = inferType(node->children[0].get());
-            if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER) {
+            if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER && condType != NodeType::NUMBER_DOUBLE && condType != NodeType::NUMBER_FLOAT) {
                 expect("Compile Error: If statement condition must be of type boolean or number", node->line, node->column);
             }
 
@@ -89,7 +89,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         }
         case NodeType::WHILE_STATEMENT: {
             NodeType condType = inferType(node->children[0].get());
-            if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER) {
+            if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER && condType != NodeType::NUMBER_DOUBLE && condType != NodeType::NUMBER_FLOAT) {
                 expect("Compile Error: While loop condition must be of type boolean or number", node->line, node->column);
             }
 

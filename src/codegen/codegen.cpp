@@ -162,12 +162,15 @@ void CodeGenerator::visitIfStatement(const ASTNode* node) {
     llvm::Value* condVal = visitExpression(node->children[0].get());
     if (!condVal) return;
 
-    if (condVal->getType()->isIntegerTy() && !condVal->getType()->isIntegerTy(1)) {
+    if (condVal->getType()->isFloatingPointTy()) {
+        condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(condVal->getType(), 0.0), "ifcond");
+    } else if (condVal->getType()->isIntegerTy() && !condVal->getType()->isIntegerTy(1)) {
+        condVal = builder.CreateIsNotNull(condVal, "ifcond");
+    } else if (condVal->getType()->isPointerTy()) {
         condVal = builder.CreateIsNotNull(condVal, "ifcond");
     }
 
     llvm::Function* func = builder.GetInsertBlock()->getParent();
-
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context, "then", func);
     llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context, "else");
     llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "ifcont");
@@ -209,7 +212,10 @@ void CodeGenerator::visitWhileStatement(const ASTNode* node) {
     llvm::Value* condVal = visitExpression(node->children[0].get());
     if (!condVal) return;
 
-    if (condVal->getType()->isIntegerTy() && !condVal->getType()->isIntegerTy(1)) {
+
+    if (condVal->getType()->isFloatingPointTy()) {
+        condVal = builder.CreateFCmpONE(condVal, llvm::ConstantFP::get(condVal->getType(), 0.0), "whilecond");
+    } else if (condVal->getType()->isIntegerTy() && !condVal->getType()->isIntegerTy(1)) {
         condVal = builder.CreateIsNotNull(condVal, "whilecond");
     }
 
