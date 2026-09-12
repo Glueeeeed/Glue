@@ -20,7 +20,7 @@ features:
   - title: LLVM-Powered Performance
     details: Source code is compiled ahead-of-time (AOT) to LLVM Intermediate Representation and optimized by Clang into native machine code.
   - title: Granular Mutability (sticky & const)
-    details: Fine-grained variable state control with standard mutable variables, compile-time `const`, and the unique `sticky` modifier (exactly one reassignment).
+    details: Fine-grained variable state control with standard mutable variables, compile-time constants, and the unique sticky modifier (exactly one reassignment).
   - title:  Simple & Intuitive Syntax
-    details: Clean C-family procedural syntax, static typing, built-in variadic `shout` logging, and custom block comments `/*g ... g*/`.
+    details: Clean C-family procedural syntax, static typing, built-in variadic shout logging, and custom block comments /*g ... g*/.
 ---

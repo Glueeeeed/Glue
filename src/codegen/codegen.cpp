@@ -250,7 +250,7 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
             val = builder.CreateIsNotNull(val, "boolcast");
         }
     } else {
-        expect("Codegen Error: unknown type '" + typeNode->value + "'");
+        expect("Compile Error: unknown type '" + typeNode->value + "'");
         return;
     }
 
@@ -268,7 +268,7 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
 
     std::string varName = idNode->value;
     if (namedValues.count(varName) == 0) {
-        expect("Codegen Error: variable '" + varName + "' not found");
+        expect("Compile Error: variable '" + varName + "' not found");
     }
 
     llvm::Value* val = visitExpression(valNode);
@@ -346,7 +346,7 @@ llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
 
     llvm::Function* callee = module->getFunction(functionName);
     if (!callee) {
-        expect("Codegen Error: function '" + functionName + "' not found");
+        expect("Compile Error: function '" + functionName + "' not found");
     }
 
     std::vector<llvm::Value*> args;
@@ -386,7 +386,7 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
                 }
                 return builder.CreateLoad(ty, var.pointer, node->value);
             }
-            expect("Codegen Error: variable '" + node->value + "' not found");
+            expect("Compile Error: variable '" + node->value + "' not found");
         }
         case NodeType::BINARY_OPERATION: {
             llvm::Value* L = visitExpression(node->children[0].get());
@@ -477,7 +477,7 @@ void CodeGenerator::save() {
 }
 
 void CodeGenerator::run() {
-    system("clang glue.ll -o glue_program && ./glue_exe");
+    system("clang glue.ll -o glue_program && ./glue_program");
     // system("clang glue.ll -o glue_bench"); // BENCHMARKS
 
 }

@@ -37,6 +37,8 @@ struct Token {
 std::vector<Token> lexer(const char* input);
 
 static const std::unordered_map<std::string, TokenType> KEYWORDS = {
+    {"and", TokenType::AND},
+    {"or", TokenType::OR},
     {"shout", TokenType::KEYWORD},
     {"func", TokenType::KEYWORD},
     {"const", TokenType::KEYWORD},
@@ -54,11 +56,11 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"boolean", TokenType::TYPE},
     {"float", TokenType::TYPE},
     {"double", TokenType::TYPE},
-    {"tiny", TokenType::TYPE},
-    {"small", TokenType::TYPE},
+    // {"tiny", TokenType::TYPE}, // TODO: move to std library
+    // {"small", TokenType::TYPE}, // TODO: move to std library
     {"int", TokenType::TYPE},
-    {"long", TokenType::TYPE},
-    {"huge", TokenType::TYPE},
+    // {"long", TokenType::TYPE}, // TODO: move to std library
+    // {"huge", TokenType::TYPE}, // TODO: move to std library
 };
 
 #endif

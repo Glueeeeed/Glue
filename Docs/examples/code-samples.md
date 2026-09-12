@@ -8,7 +8,7 @@ This section contains working code examples illustrating various features and id
 
 Demonstrates functions, `const` and `sticky` variables, loop iterations, and multi-argument `shout` logging.
 
-```glue
+```c
 /*g
   Hello World and feature demo in Glue
 g*/
@@ -53,7 +53,7 @@ func int main() {
 
 Demonstrates how `sticky` variables permit exactly one reassignment after declaration.
 
-```glue
+```c
 func int main() {
     sticky int port = 8080;
     shout("Initial port: ", port);
@@ -75,7 +75,7 @@ func int main() {
 
 Demonstrates operator precedence, boolean comparisons, and type promotion.
 
-```glue
+```c
 func int main() {
     int a = 10;
     int b = 20;
@@ -102,7 +102,7 @@ func int main() {
 
 Measures high-iteration loop performance compiled natively via LLVM.
 
-```glue
+```c
 func int main() {
     int i = 0;
     int max = 100000000;

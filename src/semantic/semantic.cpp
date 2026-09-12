@@ -31,7 +31,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
                 visit(child.get());
             }
             if (!hasMain) {
-                expect("Semantic Error: Program must contain a 'main' function");
+                expect("Compile Error: Program must contain a 'main' function");
             }
             break;
         }
@@ -57,15 +57,15 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::RETURN_STATEMENT: {
             if (currentFunctionReturnType == "void") {
                 if (!node->children.empty()) {
-                    expect("Semantic Error: Function '" + currentFunctionName + "' with return type 'void' cannot return a value", node->line, node->column);
+                    expect("Compile Error: Function '" + currentFunctionName + "' with return type 'void' cannot return a value", node->line, node->column);
                 }
             } else {
                 if (node->children.empty()) {
-                    expect("Semantic Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' must return a value", node->line, node->column);
+                    expect("Compile Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' must return a value", node->line, node->column);
                 } else {
                     NodeType retType = inferType(node->children[0].get());
                     if (!isCompatible(currentFunctionReturnType, retType)) {
-                        expect("Semantic Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType), node->line, node->column);
+                        expect("Compile Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType), node->line, node->column);
                     }
                 }
             }
@@ -74,7 +74,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::IF_STATEMENT: {
             NodeType condType = inferType(node->children[0].get());
             if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER) {
-                expect("Semantic Error: If statement condition must be of type boolean or number", node->line, node->column);
+                expect("Compile Error: If statement condition must be of type boolean or number", node->line, node->column);
             }
 
             visit(node->children[1].get());
@@ -87,7 +87,7 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::WHILE_STATEMENT: {
             NodeType condType = inferType(node->children[0].get());
             if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER) {
-                expect("Semantic Error: While loop condition must be of type boolean or number", node->line, node->column);
+                expect("Compile Error: While loop condition must be of type boolean or number", node->line, node->column);
             }
 
             visit(node->children[1].get());
@@ -109,11 +109,11 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
     NodeType valueType = inferType(valNode);
 
     if (symbols.count(varName)) {
-        expect("Semantic Error: variable '" + varName + "' is already declared in this scope", idNode->line, idNode->column);
+        expect("Compile Error: variable '" + varName + "' is already declared in this scope", idNode->line, idNode->column);
     }
 
     if (!isCompatible(varType, valueType)) {
-        expect("Semantic Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " + varTypeFormatted, valNode->line, valNode->column);
+        expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " + varTypeFormatted, valNode->line, valNode->column);
     }
 
 
@@ -144,7 +144,7 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
         NodeType rightType = inferType(node->children[1].get());
 
         if (leftType == NodeType::STRING || rightType == NodeType::STRING) {
-            std::string errorMsg = "Semantic Error: Operator '" + node->value +
+            std::string errorMsg = "Compile Error: Operator '" + node->value +
                                    "' is not supported for type 'string'";
             expect(errorMsg, node->line, node->column);
         }
@@ -152,7 +152,7 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
             if (node->children[1]->type == NodeType::NUMBER || node->children[1]->type == NodeType::NUMBER_DOUBLE || node->children[1]->type == NodeType::NUMBER_FLOAT) {
                 double val = std::stod(node->children[1]->value);
                 if (val == 0.0) {
-                    expect("Semantic Error: Division by zero", node->line, node->column);
+                    expect("Compile Error: Division by zero", node->line, node->column);
                 }
             }
         }
@@ -235,7 +235,7 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 
 
     if (symbols.count(varName) == 0) {
-        expect("Semantic Error: variable '" + varName + "' is not declared in this scope", idNode->line, idNode->column);
+        expect("Compile Error: variable '" + varName + "' is not declared in this scope", idNode->line, idNode->column);
     }
 
 
@@ -243,13 +243,13 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     std::string declaredType = info.type;
 
     if (info.isConst == true) {
-        expect("Semantic Error: cannot assign to variable '" + varName + "' because it is a constant", idNode->line, idNode->column);
+        expect("Compile Error: cannot assign to variable '" + varName + "' because it is a constant", idNode->line, idNode->column);
     }
 
 
     if (info.isSticky == true) {
         if (info.stickyUsed == true) {
-            expect("Semantic Error: variable '" + varName + "' is 'sticky' and has already been reassigned once", idNode->line, idNode->column);
+            expect("Compile Error: variable '" + varName + "' is 'sticky' and has already been reassigned once", idNode->line, idNode->column);
         } else {
             info.stickyUsed = true;
         }
@@ -258,7 +258,7 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 
 
     if (!isCompatible(declaredType, valueType)) {
-        expect("Semantic Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + declaredType + "'", valNode->line, valNode->column);
+        expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + declaredType + "'", valNode->line, valNode->column);
     }
 }
 
@@ -282,7 +282,7 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
             }
         }
         if (!endsWithReturn) {
-            expect("Semantic Error: Function '" + funcName + "' with return type '" + returnType + "' must return a value", node->line, node->column);
+            expect("Compile Error: Function '" + funcName + "' with return type '" + returnType + "' must return a value", node->line, node->column);
         }
     }
 
@@ -291,7 +291,7 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
 
 
         if (returnType != "int") {
-            expect("Semantic Error: 'main' function must return type 'int'", node->line, node->column);
+            expect("Compile Error: 'main' function must return type 'int'", node->line, node->column);
         }
 
 
@@ -304,7 +304,7 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
         }
         
         if (!endsWithReturn) {
-            expect("Semantic Error: Function 'main' must end with a return statement (e.g., return 0;)", node->line, node->column);
+            expect("Compile Error: Function 'main' must end with a return statement (e.g., return 0;)", node->line, node->column);
         }
     }
 

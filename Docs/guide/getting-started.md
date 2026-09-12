@@ -40,7 +40,7 @@ Upon a successful build, the `glue` compiler executable will be available in you
 
 Create a source file named `main.glue`:
 
-```glue
+```c
 func int main() {
     shout("Hello from Glue!");
     return 0;

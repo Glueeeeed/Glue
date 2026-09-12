@@ -8,7 +8,7 @@ Glue provides standard control flow constructs: branching with `if` / `else` sta
 
 Conditional branching executes blocks of code based on a boolean condition:
 
-```glue
+```c
 func int main() {
     int score = 85;
 
@@ -28,7 +28,7 @@ func int main() {
 
 The `while` loop repeatedly executes a block as long as its condition evaluates to `true`:
 
-```glue
+```c
 func int main() {
     int i = 0;
 
@@ -76,7 +76,7 @@ In the current version of the Glue compiler, conditional statements (`if`, `whil
 
 Passing a bare identifier as the condition is **not supported**:
 
-```glue
+```c
 bool isActive = true;
 
 // INCORRECT / UNSUPPORTED:
@@ -91,7 +91,7 @@ if (isActive == true) {
 ```
 
 Similarly, in while loops:
-```glue
+```c
 bool isRunning = true;
 int count = 0;
 

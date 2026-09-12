@@ -270,7 +270,7 @@ std::vector<Token> lexer(const char* input) {
             }
 
             bool isFloat = false;
-            if (i < len && (content[i] == 'f' || content[i] == 'F')) {
+            if (i < len && content[i] == 'f') {
                 isFloat = true;
                 i++; column++;
             }

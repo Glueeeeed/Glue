@@ -8,7 +8,7 @@ Functions and input/output form the core of program logic and interaction in Glu
 
 Functions are declared using the `func` keyword. Glue supports explicit return types as well as default `void` return types:
 
-```glue
+```c
 func string getAppName() {
     return "Glue Engine";
 }
@@ -29,7 +29,7 @@ func printDivider() {
 
 Every executable Glue program **must** contain an entry point function named `main` or `Main` with a return type of `int`.
 
-```glue
+```c
 func int main() {
     printDivider();
     shout("Running: ", getAppName());
@@ -40,7 +40,7 @@ func int main() {
 
 ::: info Main Function Mechanics
 At code generation time, the compiler automatically handles the `main` entry point:
-- Injects a completion message `--- Program finished ---`.
+- Injects a completion message `Program completed successfully. Press Enter to exit.`.
 - Injects a `getchar()` call to prevent immediate terminal termination on execution.
 - Returns `0` to the operating system.
 :::
@@ -51,9 +51,9 @@ At code generation time, the compiler automatically handles the `main` entry poi
 
 Glue provides a built-in variadic logging statement named `shout`.
 
-`shout` accepts a comma-separated list of expressions, evaluates them sequentially, and prints them to `stdout` followed by a newline:
+`shout` accepts a comma-separated list of expressions, evaluates them sequentially:
 
-```glue
+```c
 func int main() {
     int age = 4;
     shout("Dog ", "Pedro", " is ", age, " years old. Status: ", age > 2);
@@ -61,11 +61,6 @@ func int main() {
 }
 ```
 
-### How `shout` Works Internally
-- Analyzes each argument node in the AST.
-- Automatically derives and constructs a C-style `printf` format string dynamically (`%d` for integers/booleans, `%g` for floats/doubles, `%s` for strings).
-- Upcasts 32-bit floats to 64-bit doubles (`fpext`) and small integers as required by C variadic calling conventions.
-- Appends `\n` to ensure every `shout` call prints on its own line.
 
 ---
 
@@ -75,7 +70,7 @@ func int main() {
 In the current version of the Glue compiler:
 1. **No Function Parameters / Arguments**:
    Functions currently **cannot accept arguments or parameters**. Declaring parameters in signatures (e.g. `func int add(int a, int b)`) or passing arguments in calls (e.g. `add(2, 3)`) is not supported. All functions must declare an empty parameter list `()`:
-   ```glue
+   ```c
    // UNSUPPORTED:
    // func int add(int a, int b) { return a + b; }
 
@@ -91,5 +86,5 @@ In the current version of the Glue compiler:
 3. **No Local Variable Shadowing Across Functions**:
    Because the semantic analyzer symbol table is currently flat per compilation unit, variable identifiers should remain unique across your file.
 4. **Standard Input (I/O)**:
-   There is currently no built-in `listen` or `scanf`-like input statement in the language grammar. Interactive inputs are handled at the system level via native C bindings (`getchar` in `main`).
+   There is currently no built-in `listen` or `scanf`-like input statement in the language grammar.
 :::

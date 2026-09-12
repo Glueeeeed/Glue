@@ -11,7 +11,7 @@ Glue supports both single-line comments and distinctive block comments:
 - **Single-line comment**: Begins with `//` and continues to the end of the line.
 - **Glue block comment**: Begins with `/*g` and ends with `g*/`.
 
-```glue
+```c
 // This is a standard single-line comment
 
 /*g
@@ -35,7 +35,7 @@ Glue provides fundamental primitive types mapped directly to native LLVM represe
 | `string` | `ptr` | Null-terminated string literal | `"Hello, Glue!"` |
 
 ::: tip Numeric Literals
-Floating-point numbers with a trailing `f` or `F` (e.g. `10.5f`) are parsed as `float`. Floating-point numbers without suffix (e.g. `10.5`) default to `double`.
+Floating-point numbers with a trailing `f` (e.g. `10.5f`) are parsed as `float`. Floating-point numbers without suffix (e.g. `10.5`) default to `double`.
 :::
 
 ---
@@ -47,7 +47,7 @@ Glue introduces three tiers of variable mutability:
 ### 1. Standard Mutable Variables
 Declared with `<type> <identifier> = <expression>;`. Can be reassigned arbitrarily many times.
 
-```glue
+```c
 int counter = 0;
 counter = 1;
 counter = 10;
@@ -56,7 +56,7 @@ counter = 10;
 ### 2. Constants (`const`)
 Declared with `const <type> <identifier> = <expression>;`. Immutable after declaration. Any reassignment attempt causes a compile-time semantic error.
 
-```glue
+```c
 const double PI = 3.14159;
 // PI = 3.14; // Compile Error: cannot assign to variable 'PI' because it is a constant
 ```
@@ -64,7 +64,7 @@ const double PI = 3.14159;
 ### 3. Sticky Variables (`sticky`)
 Declared with `sticky <type> <identifier> = <expression>;`. A `sticky` variable allows **exactly one** reassignment during its lifetime. Any subsequent reassignment triggers a compile-time semantic error.
 
-```glue
+```c
 sticky string appStatus = "starting";
 appStatus = "ready"; // OK: first reassignment allowed
 
