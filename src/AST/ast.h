@@ -45,8 +45,6 @@ struct ASTNode {
 };
 
 class AST {
-
-    private:
     std::unique_ptr<ASTNode> root;
 
  public:

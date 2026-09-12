@@ -1,6 +1,6 @@
 #include "semantic.h"
 #include "../parser/parser.h"
-#include <iostream>
+#include "scope.h"
 #include <sstream>
 
 std::string nodeTypeToString(NodeType t) {
@@ -38,11 +38,14 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
         case NodeType::FUNCTION_DECLARATION:
             visitFunctionDeclaration(node);
             break;
-        case NodeType::BLOCK:
+        case NodeType::BLOCK: {
+            symbolTable.enterScope();
             for (const auto& child : node->children) {
                 visit(child.get());
             }
+            symbolTable.exitScope();
             break;
+        }
         case NodeType::DECLARATION:
             visitDeclaration(node);
             break;
@@ -105,21 +108,22 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
 
     std::string varName = idNode->value;
     std::string varTypeFormatted = "'" + typeNode->value + "'";
-    std::string varType =  typeNode->value;
+    std::string varType = typeNode->value;
     NodeType valueType = inferType(valNode);
-
-    if (symbols.count(varName)) {
-        expect("Compile Error: variable '" + varName + "' is already declared in this scope", idNode->line, idNode->column);
-    }
 
     if (!isCompatible(varType, valueType)) {
         expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " + varTypeFormatted, valNode->line, valNode->column);
     }
 
+    SymbolInfo info;
+    info.type = varType;
+    info.isConst = idNode->isConst;
+    info.isSticky = idNode->isSticky;
+    info.stickyUsed = idNode->stickyUsed;
 
-    declareSymbol(node, idNode->isConst, idNode->stickyUsed, idNode->isSticky );
-
-
+    if (!symbolTable.declare(varName, info)) {
+        expect("Compile Error: variable '" + varName + "' is already declared in this scope", idNode->line, idNode->column);
+    }
 }
 
 
@@ -166,15 +170,17 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
     }
 
     if (node->type == NodeType::IDENTIFIER) {
-        if (symbols.count(node->value)) {
-            std::string typeStr = symbols[node->value].type;
-            if (typeStr == "int") return NodeType::NUMBER;
-            if (typeStr == "double") return NodeType::NUMBER_DOUBLE;
-            if (typeStr == "float") return NodeType::NUMBER_FLOAT;
-            if (typeStr == "string") return NodeType::STRING;
-            if (typeStr == "bond") return NodeType::BOND;
+        SymbolInfo* info = symbolTable.lookup(node->value);
+        if (info) {
+            if (info->type == "int") return NodeType::NUMBER;
+            if (info->type == "double") return NodeType::NUMBER_DOUBLE;
+            if (info->type == "float") return NodeType::NUMBER_FLOAT;
+            if (info->type == "string") return NodeType::STRING;
+            if (info->type == "bond") return NodeType::BOND;
+            if (info->type == "bool" || info->type == "boolean") return NodeType::BOOLEAN;
         }
-        return NodeType::BOND; // Unknown identifier or unknown type
+        expect("Compile Error: variable '" + node->value + "' is not declared in this scope", node->line, node->column);
+        return NodeType::BOND;
     }
 
     return node->type;
@@ -228,37 +234,30 @@ void SemanticAnalyzer::declareSymbol(const ASTNode *node, bool isConst, bool sti
 }
 
 void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
-    const ASTNode* idNode   = node->children[0].get();
+    const ASTNode* idNode  = node->children[0].get();
     const ASTNode* valNode = node->children[1].get();
     std::string varName = idNode->value;
     NodeType valueType = inferType(valNode);
 
-
-    if (symbols.count(varName) == 0) {
+    SymbolInfo* info = symbolTable.lookup(varName);
+    if (!info) {
         expect("Compile Error: variable '" + varName + "' is not declared in this scope", idNode->line, idNode->column);
     }
 
-
-    SymbolInfo& info = symbols[varName];
-    std::string declaredType = info.type;
-
-    if (info.isConst == true) {
+    if (info->isConst) {
         expect("Compile Error: cannot assign to variable '" + varName + "' because it is a constant", idNode->line, idNode->column);
     }
 
-
-    if (info.isSticky == true) {
-        if (info.stickyUsed == true) {
+    if (info->isSticky) {
+        if (info->stickyUsed) {
             expect("Compile Error: variable '" + varName + "' is 'sticky' and has already been reassigned once", idNode->line, idNode->column);
         } else {
-            info.stickyUsed = true;
+            info->stickyUsed = true;
         }
     }
 
-
-
-    if (!isCompatible(declaredType, valueType)) {
-        expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + declaredType + "'", valNode->line, valNode->column);
+    if (!isCompatible(info->type, valueType)) {
+        expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + info->type + "'", valNode->line, valNode->column);
     }
 }
 

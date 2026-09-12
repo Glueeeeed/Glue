@@ -1,23 +1,18 @@
 #ifndef SEMANTIC_H
 #define SEMANTIC_H
+
 #include <string>
 #include <unordered_map>
-
+#include "scope.h"
 #include "../AST/ast.h"
 
-struct SymbolInfo {
-    std::string type;
-    bool isConst = false;
-    bool isSticky = false;
-    std::string value;
-    mutable bool stickyUsed = false;
-};
-
 class SemanticAnalyzer {
+    Scope symbolTable;
     std::unordered_map<std::string, SymbolInfo> symbols;
     std::string currentFunctionReturnType;
     std::string currentFunctionName;
-    public:
+
+public:
     void analyse(const ASTNode* node);
     void visit(const ASTNode* node);
     void visitDeclaration(const ASTNode* node);
@@ -27,9 +22,6 @@ class SemanticAnalyzer {
     bool isCompatible(const std::string& declaredType, NodeType valueType);
     void declareSymbol(const ASTNode* node, bool isConst, bool stickyUsed, bool isSticky);
     static void expect(std::string msg, int line = 0, int column = 0);
-
-
-
 };
 
-#endif
+#endif // SEMANTIC_H

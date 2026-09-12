@@ -69,6 +69,8 @@ add_executable(glue
         src/semantic/semantic.h
         src/codegen/codegen.cpp
         src/codegen/codegen.h
+        src/semantic/scope.cpp
+        src/semantic/scope.h
 )
 
 target_include_directories(glue PRIVATE

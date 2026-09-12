@@ -15,8 +15,7 @@ public:
 };
 
 class Parser {
-    private:
-        std::vector<Token> tokens;
+    std::vector<Token> tokens;
         std::vector<std::string> types = {"int", "string", "float", "double", "bool"};
         int tokenPos = 0;
         AST ast;

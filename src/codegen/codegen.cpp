@@ -17,15 +17,38 @@ void CodeGenerator::generateCode(const ASTNode *node) {
     save();
 }
 
+void CodeGenerator::enterScope() {
+    namedValuesStack.emplace_back();
+}
+
+void CodeGenerator::exitScope() {
+    if (!namedValuesStack.empty()) {
+        namedValuesStack.pop_back();
+    }
+}
+
+namedValuesStruct* CodeGenerator::lookupNamedValue(const std::string& name) {
+    for (auto it = namedValuesStack.rbegin(); it != namedValuesStack.rend(); ++it) {
+        auto found = it->find(name);
+        if (found != it->end()) {
+            return &(found->second);
+        }
+    }
+    return nullptr;
+}
+
+
 void CodeGenerator::generate(const ASTNode *node) {
     if (!node) return;
 
     switch (node->type) {
         case NodeType::PROGRAM:
         case NodeType::BLOCK:
+            enterScope();
             for (const auto& child : node->children) {
                 generate(child.get());
             }
+            exitScope();
             break;
         case NodeType::FUNCTION_DECLARATION: {
             std::string funcName = node->value;
@@ -56,7 +79,7 @@ void CodeGenerator::generate(const ASTNode *node) {
                 funcType, llvm::Function::ExternalLinkage, funcName, module.get());
 
             currentFunction = func;
-            namedValues.clear();
+
 
             llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entry", func);
             builder.SetInsertPoint(entry);
@@ -259,28 +282,29 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
     auto* allocaInst = createEntryAlloca(currentFunction, builder, ty, varName);
     builder.CreateStore(val, allocaInst);
     
-    namedValuesStruct& namedValueData = namedValues[varName];
-    namedValueData.nodeType = nt;
-    namedValueData.pointer = allocaInst;
-}
 
+    if (!namedValuesStack.empty()) {
+        namedValuesStack.back()[varName] = { allocaInst, nt };
+    }
+}
 void CodeGenerator::visitAssignment(const ASTNode *node) {
     const ASTNode* idNode   = node->children[0].get();
     const ASTNode* valNode  = node->children[1].get();
 
     std::string varName = idNode->value;
-    if (namedValues.count(varName) == 0) {
+    namedValuesStruct* var = lookupNamedValue(varName);
+    if (!var) {
         expect("Compile Error: variable '" + varName + "' not found");
+        return;
     }
 
     llvm::Value* val = visitExpression(valNode);
-    auto& var = namedValues[varName];
 
-    if (var.nodeType == NodeType::NUMBER) {
+    if (var->nodeType == NodeType::NUMBER) {
         if (val->getType()->isFloatingPointTy()) {
             val = builder.CreateFPToSI(val, builder.getInt32Ty(), "castit");
         }
-    } else if (var.nodeType == NodeType::NUMBER_DOUBLE) {
+    } else if (var->nodeType == NodeType::NUMBER_DOUBLE) {
         if (!val->getType()->isDoubleTy()) {
             if (val->getType()->isFloatingPointTy()) {
                 val = builder.CreateFPExt(val, builder.getDoubleTy(), "castd");
@@ -288,7 +312,7 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
                 val = builder.CreateSIToFP(val, builder.getDoubleTy(), "castd");
             }
         }
-    } else if (var.nodeType == NodeType::NUMBER_FLOAT) {
+    } else if (var->nodeType == NodeType::NUMBER_FLOAT) {
         if (!val->getType()->isFloatTy()) {
             if (val->getType()->isFloatingPointTy()) {
                 val = builder.CreateFPTrunc(val, builder.getFloatTy(), "castf");
@@ -296,13 +320,13 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
                 val = builder.CreateSIToFP(val, builder.getFloatTy(), "castf");
             }
         }
-    } else if (var.nodeType == NodeType::BOOLEAN) {
+    } else if (var->nodeType == NodeType::BOOLEAN) {
         if (!val->getType()->isIntegerTy(1)) {
             val = builder.CreateIsNotNull(val, "boolcast");
         }
     }
 
-    builder.CreateStore(val, var.pointer);
+    builder.CreateStore(val, var->pointer);
 }
 
 llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
@@ -372,21 +396,21 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
         case NodeType::STRING:
             return builder.CreateGlobalString(node->value);
         case NodeType::IDENTIFIER: {
-            if (namedValues.count(node->value)) {
-                auto var = namedValues[node->value];
+            namedValuesStruct* var = lookupNamedValue(node->value);
+            if (var) {
                 llvm::Type* ty;
-                if (var.nodeType == NodeType::NUMBER) {
+                if (var->nodeType == NodeType::NUMBER) {
                     ty = builder.getInt32Ty();
-                } else if (var.nodeType == NodeType::NUMBER_DOUBLE) {
+                } else if (var->nodeType == NodeType::NUMBER_DOUBLE) {
                     ty = builder.getDoubleTy();
-                } else if (var.nodeType == NodeType::NUMBER_FLOAT) {
+                } else if (var->nodeType == NodeType::NUMBER_FLOAT) {
                     ty = builder.getFloatTy();
-                } else if (var.nodeType == NodeType::BOOLEAN) {
+                } else if (var->nodeType == NodeType::BOOLEAN) {
                     ty = builder.getInt1Ty();
                 } else {
                     ty = builder.getPtrTy();
                 }
-                return builder.CreateLoad(ty, var.pointer, node->value);
+                return builder.CreateLoad(ty, var->pointer, node->value);
             }
             expect("Compile Error: variable '" + node->value + "' not found");
         }

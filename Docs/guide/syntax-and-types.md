@@ -73,13 +73,11 @@ appStatus = "ready"; // OK: first reassignment allowed
 
 ---
 
-## Current Scope & Declaration Limitations
+##  Declaration Limitations
 
-::: warning Important Scope Limitations
-1. **Flat Symbol Table (No Lexical Scoping / Shadowing)**:
-   The semantic analyzer currently tracks variables across a single flat symbol table per compilation unit. Variables declared inside blocks or separate functions must have unique identifier names throughout the file; variable shadowing across inner `{ ... }` blocks is not supported.
-2. **Declaration with Initialization**:
+::: warning Important Limitations
+1. **Declaration with Initialization**:
    Variables must be initialized at declaration time (`int x = 5;`). Uninitialized declarations (`int x;`) are not supported.
-3. **Compound Assignment Operators**:
+2. **Compound Assignment Operators**:
    Operators like `+=`, `-=`, `*=`, `/=`, as well as `++` and `--`, are not yet implemented. Use explicit reassignment: `count = count + 1;`.
 :::

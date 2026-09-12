@@ -17,15 +17,18 @@ struct namedValuesStruct {
 
 
 class CodeGenerator {
-private:
+
+    std::vector<std::unordered_map<std::string, namedValuesStruct>> namedValuesStack;
 
     llvm::LLVMContext &context;
     std::unique_ptr<llvm::Module> module;
     llvm::IRBuilder<> builder;
     llvm::BasicBlock* currentExitBlock;
-    std::unordered_map<std::string, namedValuesStruct> namedValues;
     llvm::Function* printf = nullptr;
     llvm::Function* currentFunction = nullptr;
+    void enterScope();
+    void exitScope();
+    namedValuesStruct* lookupNamedValue(const std::string& name);
     void visit(const ASTNode* node);
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);
