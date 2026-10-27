@@ -54,6 +54,7 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"return", TokenType::KEYWORD},
     {"true", TokenType::BOOLEAN_TRUE},
     {"nulo", TokenType::NULO},
+    {"sino", TokenType::COALESCE},
     {"false", TokenType::BOOLEAN_FALSE},
     {"string", TokenType::TYPE},
     {"bool", TokenType::TYPE},

@@ -96,7 +96,7 @@ bool SemanticAnalyzer::isExprNullable(const ASTNode* node) {
         }
 
         case NodeType::BINARY_OPERATION: {
-            if (node->value == "??") {
+            if (node->value == "sino") {
                 return isExprNullable(node->children[1].get());
             }
             return false;

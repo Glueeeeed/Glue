@@ -145,7 +145,7 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
             NodeType leftType = inferType(leftNode);
             NodeType rightType = inferType(rightNode);
 
-            if (node->value != "==" && node->value != "!=" && node->value != "??") {
+            if (node->value != "==" && node->value != "!=" && node->value != "sino") {
                 if (isExprNullable(leftNode) || isExprNullable(rightNode)) {
                     expect("Compile Error: arithmetic/logical operator '" + node->value + "' cannot be applied to non-nulo types", node->line, node->column);
                 }
@@ -159,6 +159,15 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
                 checkDivisionByZero(node->children[1].get(), node->line, node->column);
             }
 
+            if (node->value == "sino") {
+                NodeType leftType = inferType(node->children[0].get());
+                NodeType rightType = inferType(node->children[1].get());
+
+                if (leftType != rightType) {
+                    expect("Compile Error: type mismatch in 'sino' operator; left and right operands must have compatible base types", node->line, node->column);
+                }
+                return leftType;
+            }
 
             if (node->value == "==" || node->value == ">" || node->value == "<" || node->value == ">=" || node->value == "<=" || node->value == "!=") return NodeType::BOOLEAN;
 

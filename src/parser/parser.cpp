@@ -170,7 +170,7 @@ std::unique_ptr<ASTNode> Parser::parseLogicalOr() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseLogicalAnd() {
-    auto left = parseComparison();
+    auto left = parseCoalescing();
     while (currentToken().type == TokenType::AND) {
         Token op = currentToken();
         nextToken();
@@ -224,6 +224,20 @@ std::unique_ptr<ASTNode> Parser::parseAssign() {
     assign->children.push_back(ast.makeIdentifier(identifier, idToken.line, idToken.column));
     assign->children.push_back(std::move(expr));
     return assign;
+}
+
+std::unique_ptr<ASTNode> Parser::parseCoalescing() {
+    auto left = parseComparison();
+
+    while (currentToken().type == TokenType::COALESCE) {
+        Token opToken = currentToken();
+        nextToken();
+
+        auto right = parseComparison();
+        left = ast.makeBinaryOp("sino", std::move(left), std::move(right), opToken.line, opToken.column);
+    }
+
+    return left;
 }
 
 

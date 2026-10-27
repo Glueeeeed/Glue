@@ -13,9 +13,10 @@ void CodeGenerator::generateCode(const ASTNode *node) {
     module->setTargetTriple(llvm::Triple(llvm::sys::getDefaultTargetTriple()));
 
     generate(node);
-    
+
     save();
 }
+
 void CodeGenerator::enterScope() {
     namedValuesStack.emplace_back();
 }
@@ -26,7 +27,7 @@ void CodeGenerator::exitScope() {
     }
 }
 
-namedValuesStruct* CodeGenerator::lookupNamedValue(const std::string& name) {
+namedValuesStruct *CodeGenerator::lookupNamedValue(const std::string &name) {
     for (auto it = namedValuesStack.rbegin(); it != namedValuesStack.rend(); ++it) {
         auto found = it->find(name);
         if (found != it->end()) {
@@ -44,7 +45,7 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::PROGRAM:
         case NodeType::BLOCK:
             enterScope();
-            for (const auto& child : node->children) {
+            for (const auto &child: node->children) {
                 generate(child.get());
             }
             exitScope();
@@ -55,8 +56,8 @@ void CodeGenerator::generate(const ASTNode *node) {
 
 
             std::string returnTypeName = (!node->children.empty() && node->children[0]->type == NodeType::TYPE)
-                                         ? node->children[0]->value
-                                         : "void";
+                                             ? node->children[0]->value
+                                             : "void";
 
             bool returnIsNullable = false;
             if (!returnTypeName.empty() && returnTypeName.back() == '?') {
@@ -64,13 +65,13 @@ void CodeGenerator::generate(const ASTNode *node) {
                 returnTypeName.pop_back();
             }
 
-            llvm::Type* retType = getLLVMType(returnTypeName, returnIsNullable);
+            llvm::Type *retType = getLLVMType(returnTypeName, returnIsNullable);
 
-            std::vector<llvm::Type*> paramTypes;
-            const ASTNode* paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
+            std::vector<llvm::Type *> paramTypes;
+            const ASTNode *paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
 
             if (paramsNode) {
-                for (const auto& param : paramsNode->children) {
+                for (const auto &param: paramsNode->children) {
                     std::string pType = param->children[1]->value;
                     bool pNullable = false;
                     if (!pType.empty() && pType.back() == '?') {
@@ -109,11 +110,11 @@ void CodeGenerator::generate(const ASTNode *node) {
             if (funcName == "main") {
                 this->currentExitBlock = llvm::BasicBlock::Create(context, "exit", func);
             }
-            llvm::BasicBlock* ExitBB = this->currentExitBlock;
+            llvm::BasicBlock *ExitBB = this->currentExitBlock;
 
-            const ASTNode* bodyNode = node->children.back().get();
+            const ASTNode *bodyNode = node->children.back().get();
             if (bodyNode && bodyNode->type == NodeType::BLOCK) {
-                for (const auto& child : bodyNode->children) {
+                for (const auto &child: bodyNode->children) {
                     generate(child.get());
                 }
             }
@@ -121,8 +122,6 @@ void CodeGenerator::generate(const ASTNode *node) {
             exitScope();
 
             if (funcName == "main") {
-
-
                 if (auto *existingTerm = builder.GetInsertBlock()->getTerminator()) {
                     existingTerm->eraseFromParent();
                 }
@@ -131,8 +130,10 @@ void CodeGenerator::generate(const ASTNode *node) {
 
                 builder.SetInsertPoint(ExitBB);
 
-                auto exitInfo = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
-                builder.CreateCall(exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit.\n"));
+                auto exitInfo = module->getOrInsertFunction(
+                    "printf", llvm::FunctionType::get(builder.getInt32Ty(), {builder.getPtrTy()}, true));
+                builder.CreateCall(
+                    exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit.\n"));
 
                 auto *getcharType = llvm::FunctionType::get(builder.getInt32Ty(), false);
                 auto getcharFunc = module->getOrInsertFunction("getchar", getcharType);
@@ -162,25 +163,23 @@ void CodeGenerator::generate(const ASTNode *node) {
             if (currentFunction->getName() == "main") {
                 builder.CreateBr(this->currentExitBlock);
             } else if (!node->children.empty()) {
-                const ASTNode* retExpr = node->children[0].get();
-                llvm::Type* expectedRetTy = currentFunction->getReturnType();
+                const ASTNode *retExpr = node->children[0].get();
+                llvm::Type *expectedRetTy = currentFunction->getReturnType();
 
                 if (retExpr->type == NodeType::NULO) {
                     builder.CreateRet(llvm::Constant::getNullValue(expectedRetTy));
                 } else {
-                    llvm::Value* retVal = visitExpression(retExpr);
+                    llvm::Value *retVal = visitExpression(retExpr);
 
                     if (expectedRetTy->isStructTy() && !retVal->getType()->isStructTy()) {
-                        llvm::Value* structVal = llvm::UndefValue::get(expectedRetTy);
+                        llvm::Value *structVal = llvm::UndefValue::get(expectedRetTy);
                         structVal = builder.CreateInsertValue(structVal, builder.getInt1(true), 0);
                         structVal = builder.CreateInsertValue(structVal, retVal, 1);
                         builder.CreateRet(structVal);
-                    }
-                    else if (!expectedRetTy->isStructTy() && retVal->getType()->isStructTy()) {
-                        llvm::Value* unboxed = builder.CreateExtractValue(retVal, 1, "unboxed_ret");
+                    } else if (!expectedRetTy->isStructTy() && retVal->getType()->isStructTy()) {
+                        llvm::Value *unboxed = builder.CreateExtractValue(retVal, 1, "unboxed_ret");
                         builder.CreateRet(unboxed);
-                    }
-                    else {
+                    } else {
                         builder.CreateRet(retVal);
                     }
                 }
@@ -206,8 +205,8 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::BREAK_STATEMENT: {
             if (!loopStack.empty()) {
                 builder.CreateBr(loopStack.back().breakTarget);
-                llvm::Function* func = builder.GetInsertBlock()->getParent();
-                llvm::BasicBlock* deadBB = llvm::BasicBlock::Create(context, "after.break", func);
+                llvm::Function *func = builder.GetInsertBlock()->getParent();
+                llvm::BasicBlock *deadBB = llvm::BasicBlock::Create(context, "after.break", func);
                 builder.SetInsertPoint(deadBB);
             }
             break;
@@ -215,8 +214,8 @@ void CodeGenerator::generate(const ASTNode *node) {
         case NodeType::CONTINUE_STATEMENT: {
             if (!loopStack.empty()) {
                 builder.CreateBr(loopStack.back().continueTarget);
-                llvm::Function* func = builder.GetInsertBlock()->getParent();
-                llvm::BasicBlock* deadBB = llvm::BasicBlock::Create(context, "after.continue", func);
+                llvm::Function *func = builder.GetInsertBlock()->getParent();
+                llvm::BasicBlock *deadBB = llvm::BasicBlock::Create(context, "after.continue", func);
                 builder.SetInsertPoint(deadBB);
             }
             break;
@@ -226,8 +225,8 @@ void CodeGenerator::generate(const ASTNode *node) {
     }
 }
 
-void CodeGenerator::visitIfStatement(const ASTNode* node) {
-    llvm::Value* condVal = visitExpression(node->children[0].get());
+void CodeGenerator::visitIfStatement(const ASTNode *node) {
+    llvm::Value *condVal = visitExpression(node->children[0].get());
     if (!condVal) return;
 
     if (condVal->getType()->isStructTy()) {
@@ -240,10 +239,10 @@ void CodeGenerator::visitIfStatement(const ASTNode* node) {
         condVal = builder.CreateIsNotNull(condVal, "ifcond");
     }
 
-    llvm::Function* func = builder.GetInsertBlock()->getParent();
-    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context, "then", func);
-    llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context, "else");
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "ifcont");
+    llvm::Function *func = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock *thenBB = llvm::BasicBlock::Create(context, "then", func);
+    llvm::BasicBlock *elseBB = llvm::BasicBlock::Create(context, "else");
+    llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "ifcont");
 
     bool hasElse = node->children.size() > 2;
 
@@ -269,17 +268,17 @@ void CodeGenerator::visitIfStatement(const ASTNode* node) {
 }
 
 
-void CodeGenerator::visitWhileStatement(const ASTNode* node) {
-    llvm::Function* func = builder.GetInsertBlock()->getParent();
+void CodeGenerator::visitWhileStatement(const ASTNode *node) {
+    llvm::Function *func = builder.GetInsertBlock()->getParent();
 
-    llvm::BasicBlock* condBB = llvm::BasicBlock::Create(context, "while.cond", func);
-    llvm::BasicBlock* bodyBB = llvm::BasicBlock::Create(context, "while.body");
-    llvm::BasicBlock* endBB  = llvm::BasicBlock::Create(context, "while.end");
+    llvm::BasicBlock *condBB = llvm::BasicBlock::Create(context, "while.cond", func);
+    llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(context, "while.body");
+    llvm::BasicBlock *endBB = llvm::BasicBlock::Create(context, "while.end");
 
     builder.CreateBr(condBB);
 
     builder.SetInsertPoint(condBB);
-    llvm::Value* condVal = visitExpression(node->children[0].get());
+    llvm::Value *condVal = visitExpression(node->children[0].get());
     if (!condVal) return;
 
     if (condVal->getType()->isStructTy()) {
@@ -311,22 +310,22 @@ void CodeGenerator::visitWhileStatement(const ASTNode* node) {
 
 
 void CodeGenerator::visitDeclaration(const ASTNode *node) {
-    const ASTNode* idNode   = node->children[0].get();
-    const ASTNode* typeNode = node->children[1].get();
-    const ASTNode* valNode  = node->children[2].get();
+    const ASTNode *idNode = node->children[0].get();
+    const ASTNode *typeNode = node->children[1].get();
+    const ASTNode *valNode = node->children[2].get();
 
     std::string varName = idNode->value;
     std::string typeName = typeNode->value;
     bool isNullable = idNode->isNullable;
 
-    llvm::Type* varType = getLLVMType(typeName, isNullable);
-    auto* allocaInst = createEntryAlloca(currentFunction, builder, varType, varName);
+    llvm::Type *varType = getLLVMType(typeName, isNullable);
+    auto *allocaInst = createEntryAlloca(currentFunction, builder, varType, varName);
 
     if (valNode->type == NodeType::NULO) {
-        llvm::Value* nullVal = llvm::Constant::getNullValue(varType);
+        llvm::Value *nullVal = llvm::Constant::getNullValue(varType);
         builder.CreateStore(nullVal, allocaInst);
     } else if (isNullable && typeName != "string") {
-        llvm::Value* rawVal = visitExpression(valNode);
+        llvm::Value *rawVal = visitExpression(valNode);
 
         if (rawVal->getType()->isStructTy()) {
             builder.CreateStore(rawVal, allocaInst);
@@ -349,13 +348,13 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
                 rawVal = builder.CreateIsNotNull(rawVal, "boolcast");
             }
 
-            llvm::Value* structVal = llvm::UndefValue::get(varType);
+            llvm::Value *structVal = llvm::UndefValue::get(varType);
             structVal = builder.CreateInsertValue(structVal, builder.getInt1(true), 0);
             structVal = builder.CreateInsertValue(structVal, rawVal, 1);
             builder.CreateStore(structVal, allocaInst);
         }
     } else {
-        llvm::Value* rawVal = visitExpression(valNode);
+        llvm::Value *rawVal = visitExpression(valNode);
         if (rawVal->getType()->isStructTy()) {
             rawVal = builder.CreateExtractValue(rawVal, 1, "unboxed_val");
         }
@@ -363,31 +362,31 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
     }
 
     if (!namedValuesStack.empty()) {
-        namedValuesStack.back()[varName] = { allocaInst, getNodeType(typeName), isNullable };
+        namedValuesStack.back()[varName] = {allocaInst, getNodeType(typeName), isNullable};
     }
 }
 
 void CodeGenerator::visitAssignment(const ASTNode *node) {
-    const ASTNode* idNode   = node->children[0].get();
-    const ASTNode* valNode  = node->children[1].get();
+    const ASTNode *idNode = node->children[0].get();
+    const ASTNode *valNode = node->children[1].get();
 
     std::string varName = idNode->value;
-    namedValuesStruct* var = lookupNamedValue(varName);
+    namedValuesStruct *var = lookupNamedValue(varName);
     if (!var) {
         expect("Compile Error: variable '" + varName + "' not found");
         return;
     }
 
     if (var->isNullable && var->nodeType != NodeType::STRING) {
-        llvm::Type* varType = var->pointer->getAllocatedType();
+        llvm::Type *varType = var->pointer->getAllocatedType();
 
         if (valNode->type == NodeType::NULO) {
-            llvm::Value* nullVal = llvm::Constant::getNullValue(varType);
+            llvm::Value *nullVal = llvm::Constant::getNullValue(varType);
             builder.CreateStore(nullVal, var->pointer);
             return;
         }
 
-        llvm::Value* val = visitExpression(valNode);
+        llvm::Value *val = visitExpression(valNode);
 
         if (val->getType()->isStructTy()) {
             builder.CreateStore(val, var->pointer);
@@ -420,7 +419,7 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
             }
         }
 
-        llvm::Value* structVal = llvm::UndefValue::get(varType);
+        llvm::Value *structVal = llvm::UndefValue::get(varType);
         structVal = builder.CreateInsertValue(structVal, builder.getInt1(true), 0);
         structVal = builder.CreateInsertValue(structVal, val, 1);
         builder.CreateStore(structVal, var->pointer);
@@ -428,12 +427,12 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
     }
 
     if (valNode->type == NodeType::NULO) {
-        llvm::Value* nullVal = llvm::Constant::getNullValue(var->pointer->getAllocatedType());
+        llvm::Value *nullVal = llvm::Constant::getNullValue(var->pointer->getAllocatedType());
         builder.CreateStore(nullVal, var->pointer);
         return;
     }
 
-    llvm::Value* val = visitExpression(valNode);
+    llvm::Value *val = visitExpression(valNode);
 
     if (val->getType()->isStructTy()) {
         val = builder.CreateExtractValue(val, 1, "unboxed_val");
@@ -468,84 +467,90 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
     builder.CreateStore(val, var->pointer);
 }
 
-llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
+llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
     std::string functionName = node->value;
 
 
     if (functionName == "shin") {
-        auto mallocFunc = module->getOrInsertFunction("malloc", llvm::FunctionType::get(builder.getPtrTy(), { builder.getInt64Ty() }, false));
-        llvm::Value* buffer = builder.CreateCall(mallocFunc, { builder.getInt64(1024) });
+        auto mallocFunc = module->getOrInsertFunction(
+            "malloc", llvm::FunctionType::get(builder.getPtrTy(), {builder.getInt64Ty()}, false));
+        llvm::Value *buffer = builder.CreateCall(mallocFunc, {builder.getInt64(1024)});
 
-        auto scanfFunc = module->getOrInsertFunction("scanf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
-        llvm::Value* fmt = builder.CreateGlobalString("%1023s");
-        builder.CreateCall(scanfFunc, { fmt, buffer });
+        auto scanfFunc = module->getOrInsertFunction(
+            "scanf", llvm::FunctionType::get(builder.getInt32Ty(), {builder.getPtrTy()}, true));
+        llvm::Value *fmt = builder.CreateGlobalString("%1023s");
+        builder.CreateCall(scanfFunc, {fmt, buffer});
 
         return buffer;
     }
 
     if (functionName == "toInt") {
-        llvm::Value* strVal = visitExpression(node->children[0].get());
-        auto atoiFunc = module->getOrInsertFunction("atoi", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, false));
-        return builder.CreateCall(atoiFunc, { strVal });
+        llvm::Value *strVal = visitExpression(node->children[0].get());
+        auto atoiFunc = module->getOrInsertFunction(
+            "atoi", llvm::FunctionType::get(builder.getInt32Ty(), {builder.getPtrTy()}, false));
+        return builder.CreateCall(atoiFunc, {strVal});
     }
 
     if (functionName == "toDouble") {
-        llvm::Value* strVal = visitExpression(node->children[0].get());
-        auto atofFunc = module->getOrInsertFunction("atof", llvm::FunctionType::get(builder.getDoubleTy(), { builder.getPtrTy() }, false));
-        return builder.CreateCall(atofFunc, { strVal });
+        llvm::Value *strVal = visitExpression(node->children[0].get());
+        auto atofFunc = module->getOrInsertFunction(
+            "atof", llvm::FunctionType::get(builder.getDoubleTy(), {builder.getPtrTy()}, false));
+        return builder.CreateCall(atofFunc, {strVal});
     }
 
     if (functionName == "toFloat") {
-        llvm::Value* strVal = visitExpression(node->children[0].get());
-        auto atofFunc = module->getOrInsertFunction("atof", llvm::FunctionType::get(builder.getDoubleTy(), { builder.getPtrTy() }, false));
-        llvm::Value* dVal = builder.CreateCall(atofFunc, { strVal });
+        llvm::Value *strVal = visitExpression(node->children[0].get());
+        auto atofFunc = module->getOrInsertFunction(
+            "atof", llvm::FunctionType::get(builder.getDoubleTy(), {builder.getPtrTy()}, false));
+        llvm::Value *dVal = builder.CreateCall(atofFunc, {strVal});
         return builder.CreateFPTrunc(dVal, builder.getFloatTy());
     }
 
     if (functionName == "random") {
-        llvm::Value* minVal = visitExpression(node->children[0].get());
-        llvm::Value* maxVal = visitExpression(node->children[1].get());
+        llvm::Value *minVal = visitExpression(node->children[0].get());
+        llvm::Value *maxVal = visitExpression(node->children[1].get());
 
         auto randFunc = module->getOrInsertFunction("rand", llvm::FunctionType::get(builder.getInt32Ty(), false));
-        llvm::Value* r = builder.CreateCall(randFunc);
+        llvm::Value *r = builder.CreateCall(randFunc);
 
         // range = (max - min) + 1
-        llvm::Value* diff = builder.CreateSub(maxVal, minVal);
-        llvm::Value* range = builder.CreateAdd(diff, builder.getInt32(1));
+        llvm::Value *diff = builder.CreateSub(maxVal, minVal);
+        llvm::Value *range = builder.CreateAdd(diff, builder.getInt32(1));
 
         // result = min + (rand() % range)
-        llvm::Value* mod = builder.CreateSRem(r, range);
+        llvm::Value *mod = builder.CreateSRem(r, range);
         return builder.CreateAdd(minVal, mod);
     }
 
     if (functionName == "shout") {
-        auto printfFunc = module->getOrInsertFunction("printf", llvm::FunctionType::get(builder.getInt32Ty(), { builder.getPtrTy() }, true));
+        auto printfFunc = module->getOrInsertFunction(
+            "printf", llvm::FunctionType::get(builder.getInt32Ty(), {builder.getPtrTy()}, true));
         std::string format;
-        std::vector<llvm::Value*> args;
+        std::vector<llvm::Value *> args;
 
         for (size_t i = 0; i < node->children.size(); ++i) {
-            const ASTNode* arg = node->children[i].get();
+            const ASTNode *arg = node->children[i].get();
             if (!arg) continue;
 
-            llvm::Value* val = visitExpression(arg);
+            llvm::Value *val = visitExpression(arg);
             if (!val) continue;
 
-            llvm::Type* type = val->getType();
+            llvm::Type *type = val->getType();
 
-             if (type->isStructTy()) {
-                llvm::Value* hasVal = builder.CreateExtractValue(val, 0, "has_val");
-                llvm::Value* innerVal = builder.CreateExtractValue(val, 1, "inner_val");
+            if (type->isStructTy()) {
+                llvm::Value *hasVal = builder.CreateExtractValue(val, 0, "has_val");
+                llvm::Value *innerVal = builder.CreateExtractValue(val, 1, "inner_val");
 
-                llvm::Function* func = builder.GetInsertBlock()->getParent();
-                llvm::BasicBlock* valBB = llvm::BasicBlock::Create(context, "shout.val", func);
-                llvm::BasicBlock* nuloBB = llvm::BasicBlock::Create(context, "shout.nulo", func);
-                llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "shout.merge", func);
+                llvm::Function *func = builder.GetInsertBlock()->getParent();
+                llvm::BasicBlock *valBB = llvm::BasicBlock::Create(context, "shout.val", func);
+                llvm::BasicBlock *nuloBB = llvm::BasicBlock::Create(context, "shout.nulo", func);
+                llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "shout.merge", func);
 
                 builder.CreateCondBr(hasVal, valBB, nuloBB);
 
                 builder.SetInsertPoint(valBB);
                 std::string innerFmt;
-                llvm::Value* printVal = innerVal;
+                llvm::Value *printVal = innerVal;
 
                 if (innerVal->getType()->isFloatTy()) {
                     innerFmt = "%g\n";
@@ -561,13 +566,37 @@ llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
                     innerFmt = "%s\n";
                 }
 
-                llvm::Value* fmtVal = builder.CreateGlobalString(innerFmt);
-                builder.CreateCall(printfFunc, { fmtVal, printVal });
+                llvm::Value *fmtVal = builder.CreateGlobalString(innerFmt);
+                builder.CreateCall(printfFunc, {fmtVal, printVal});
                 builder.CreateBr(mergeBB);
 
                 builder.SetInsertPoint(nuloBB);
-                llvm::Value* fmtNulo = builder.CreateGlobalString("nulo\n");
-                builder.CreateCall(printfFunc, { fmtNulo });
+                llvm::Value *fmtNulo = builder.CreateGlobalString("nulo\n");
+                builder.CreateCall(printfFunc, {fmtNulo});
+                builder.CreateBr(mergeBB);
+
+                builder.SetInsertPoint(mergeBB);
+                return nullptr;
+            }
+
+            if (type->isPointerTy()) {
+                llvm::Value *isNull = builder.CreateIsNull(val, "is_null");
+
+                llvm::Function *func = builder.GetInsertBlock()->getParent();
+                llvm::BasicBlock *strBB = llvm::BasicBlock::Create(context, "shout.str", func);
+                llvm::BasicBlock *nuloBB = llvm::BasicBlock::Create(context, "shout.nulo", func);
+                llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "shout.merge", func);
+
+                builder.CreateCondBr(isNull, nuloBB, strBB);
+
+                builder.SetInsertPoint(strBB);
+                llvm::Value *fmtStr = builder.CreateGlobalString("%s\n");
+                builder.CreateCall(printfFunc, {fmtStr, val});
+                builder.CreateBr(mergeBB);
+
+                builder.SetInsertPoint(nuloBB);
+                llvm::Value *fmtNulo = builder.CreateGlobalString("nulo\n");
+                builder.CreateCall(printfFunc, {fmtNulo});
                 builder.CreateBr(mergeBB);
 
                 builder.SetInsertPoint(mergeBB);
@@ -593,29 +622,29 @@ llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
         }
 
         format += "\n";
-        llvm::Value* fmt = builder.CreateGlobalString(format);
+        llvm::Value *fmt = builder.CreateGlobalString(format);
         args.insert(args.begin(), fmt);
         return builder.CreateCall(printfFunc, args);
     }
 
-    llvm::Function* callee = module->getFunction(functionName);
+    llvm::Function *callee = module->getFunction(functionName);
     if (!callee) {
         expect("Compile Error: function '" + functionName + "' not found");
         return nullptr;
     }
 
-    std::vector<llvm::Value*> args;
-    llvm::FunctionType* calleeType = callee->getFunctionType();
+    std::vector<llvm::Value *> args;
+    llvm::FunctionType *calleeType = callee->getFunctionType();
 
     for (size_t i = 0; i < node->children.size(); ++i) {
-        const ASTNode* argNode = node->children[i].get();
+        const ASTNode *argNode = node->children[i].get();
         if (!argNode) continue;
 
-        llvm::Type* expectedParamType = (i < calleeType->getNumParams())
-                                        ? calleeType->getParamType(i)
-                                        : nullptr;
+        llvm::Type *expectedParamType = (i < calleeType->getNumParams())
+                                            ? calleeType->getParamType(i)
+                                            : nullptr;
 
-        llvm::Value* argVal = nullptr;
+        llvm::Value *argVal = nullptr;
 
         if (expectedParamType && expectedParamType->isStructTy()) {
             if (argNode->type == NodeType::NULO) {
@@ -623,14 +652,13 @@ llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
             } else {
                 argVal = visitExpression(argNode);
                 if (argVal && !argVal->getType()->isStructTy()) {
-                    llvm::Value* structVal = llvm::UndefValue::get(expectedParamType);
+                    llvm::Value *structVal = llvm::UndefValue::get(expectedParamType);
                     structVal = builder.CreateInsertValue(structVal, builder.getInt1(true), 0);
                     structVal = builder.CreateInsertValue(structVal, argVal, 1);
                     argVal = structVal;
                 }
             }
-        }
-        else {
+        } else {
             argVal = visitExpression(argNode);
             if (argVal && expectedParamType && !expectedParamType->isStructTy() && argVal->getType()->isStructTy()) {
                 argVal = builder.CreateExtractValue(argVal, 1, "unboxed_arg");
@@ -643,10 +671,9 @@ llvm::Value* CodeGenerator::visitFunction(const ASTNode* node) {
     }
 
     return builder.CreateCall(callee, args);
-
 }
 
-llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
+llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
     if (!node) return nullptr;
 
     switch (node->type) {
@@ -659,40 +686,109 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
         case NodeType::STRING:
             return builder.CreateGlobalString(node->value);
         case NodeType::IDENTIFIER: {
-            namedValuesStruct* var = lookupNamedValue(node->value);
+            namedValuesStruct *var = lookupNamedValue(node->value);
             if (var) {
                 return builder.CreateLoad(var->pointer->getAllocatedType(), var->pointer, node->value);
             }
             expect("Compile Error: variable '" + node->value + "' not found");
         }
         case NodeType::BINARY_OPERATION: {
-            const ASTNode* leftNode = node->children[0].get();
-            const ASTNode* rightNode = node->children[1].get();
+            const ASTNode *leftNode = node->children[0].get();
+            const ASTNode *rightNode = node->children[1].get();
+
+              if (node->value == "sino" || node->value == "??") {
+                const ASTNode *leftNode = node->children[0].get();
+                const ASTNode *rightNode = node->children[1].get();
+
+                llvm::Value *leftVal = visitExpression(leftNode);
+                if (!leftVal) return nullptr;
+
+                if (!leftVal->getType()->isStructTy() && !leftVal->getType()->isPointerTy()) {
+                    return leftVal;
+                }
+
+                llvm::Value *hasVal = nullptr;
+                if (leftVal->getType()->isStructTy()) {
+                    hasVal = builder.CreateExtractValue(leftVal, 0, "has_val");
+                } else if (leftVal->getType()->isPointerTy()) {
+                    llvm::Value *nullPtr = llvm::ConstantPointerNull::get(builder.getPtrTy());
+                    hasVal = builder.CreateICmpNE(leftVal, nullPtr, "not_null");
+                }
+
+                llvm::Function *func = builder.GetInsertBlock()->getParent();
+                llvm::BasicBlock *thenBB  = llvm::BasicBlock::Create(context, "sino.then", func);
+                llvm::BasicBlock *elseBB  = llvm::BasicBlock::Create(context, "sino.else", func);
+                llvm::BasicBlock *mergeBB = llvm::BasicBlock::Create(context, "sino.merge", func);
+
+                builder.CreateCondBr(hasVal, thenBB, elseBB);
+
+                builder.SetInsertPoint(thenBB);
+                llvm::Value *thenUnboxed = leftVal;
+                if (leftVal->getType()->isStructTy()) {
+                    thenUnboxed = builder.CreateExtractValue(leftVal, 1, "unboxed_left");
+                }
+                builder.CreateBr(mergeBB);
+                thenBB = builder.GetInsertBlock();
+
+                builder.SetInsertPoint(elseBB);
+                llvm::Value *rightVal = visitExpression(rightNode);
+                builder.CreateBr(mergeBB);
+                elseBB = builder.GetInsertBlock();
+
+                builder.SetInsertPoint(mergeBB);
+
+
+                if (rightVal->getType()->isStructTy()) {
+                    llvm::Value *thenVal = leftVal;
+                    if (!thenVal->getType()->isStructTy()) {
+                        auto currentIP = builder.saveIP();
+                        builder.SetInsertPoint(thenBB->getTerminator());
+                        llvm::Value *boxed = llvm::UndefValue::get(rightVal->getType());
+                        boxed = builder.CreateInsertValue(boxed, builder.getInt1(true), 0);
+                        boxed = builder.CreateInsertValue(boxed, thenVal, 1);
+                        thenVal = boxed;
+                        builder.restoreIP(currentIP);
+                    }
+
+                    llvm::PHINode *phi = builder.CreatePHI(rightVal->getType(), 2, "sino.res");
+                    phi->addIncoming(thenVal, thenBB);
+                    phi->addIncoming(rightVal, elseBB);
+                    return phi;
+                }
+
+
+                llvm::PHINode *phi = builder.CreatePHI(rightVal->getType(), 2, "sino.res");
+                phi->addIncoming(thenUnboxed, thenBB);
+                phi->addIncoming(rightVal, elseBB);
+                return phi;
+            }
 
             if (node->value == "==" || node->value == "!=") {
                 bool isRightNulo = (rightNode->type == NodeType::NULO);
                 bool isLeftNulo = (leftNode->type == NodeType::NULO);
 
                 if (isRightNulo || isLeftNulo) {
-                    const ASTNode* targetNode = isRightNulo ? leftNode : rightNode;
-                    namedValuesStruct* var = lookupNamedValue(targetNode->value);
+                    const ASTNode *targetNode = isRightNulo ? leftNode : rightNode;
+                    namedValuesStruct *var = lookupNamedValue(targetNode->value);
 
                     if (var && var->isNullable) {
                         if (var->nodeType != NodeType::STRING) {
-                            llvm::Value* structVal = builder.CreateLoad(var->pointer->getAllocatedType(), var->pointer);
-                            llvm::Value* hasVal = builder.CreateExtractValue(structVal, 0, "has_val");
+                            llvm::Value *structVal = builder.CreateLoad(var->pointer->getAllocatedType(), var->pointer);
+                            llvm::Value *hasVal = builder.CreateExtractValue(structVal, 0, "has_val");
                             return (node->value == "!=") ? hasVal : builder.CreateNot(hasVal, "is_nulo");
                         } else {
-                            llvm::Value* ptrVal = builder.CreateLoad(builder.getPtrTy(), var->pointer);
-                            llvm::Value* nullPtr = llvm::ConstantPointerNull::get(builder.getPtrTy());
-                            return (node->value == "!=") ? builder.CreateICmpNE(ptrVal, nullPtr) : builder.CreateICmpEQ(ptrVal, nullPtr);
+                            llvm::Value *ptrVal = builder.CreateLoad(builder.getPtrTy(), var->pointer);
+                            llvm::Value *nullPtr = llvm::ConstantPointerNull::get(builder.getPtrTy());
+                            return (node->value == "!=")
+                                       ? builder.CreateICmpNE(ptrVal, nullPtr)
+                                       : builder.CreateICmpEQ(ptrVal, nullPtr);
                         }
                     }
                 }
             }
 
-            llvm::Value* L = visitExpression(leftNode);
-            llvm::Value* R = visitExpression(rightNode);
+            llvm::Value *L = visitExpression(leftNode);
+            llvm::Value *R = visitExpression(rightNode);
             if (!L || !R) return nullptr;
 
             if (node->value == "and") {
@@ -706,10 +802,11 @@ llvm::Value* CodeGenerator::visitExpression(const ASTNode *node) {
                 bool isRBool = R->getType()->isIntegerTy(1);
 
                 if (isLBool || isRBool) {
-                    llvm::Value* boolL = toBool(L);
-                    llvm::Value* boolR = toBool(R);
-                    return (node->value == "==") ? builder.CreateICmpEQ(boolL, boolR, "cmptmp")
-                                                 : builder.CreateICmpNE(boolL, boolR, "cmptmp");
+                    llvm::Value *boolL = toBool(L);
+                    llvm::Value *boolR = toBool(R);
+                    return (node->value == "==")
+                               ? builder.CreateICmpEQ(boolL, boolR, "cmptmp")
+                               : builder.CreateICmpNE(boolL, boolR, "cmptmp");
                 }
             }
 
@@ -818,7 +915,6 @@ void CodeGenerator::run() {
     system("rm gir.ll");
 #endif
     // system("clang gir.ll -o glue_bench"); // BENCHMARKS
-
 }
 
 void CodeGenerator::expect(std::string msg) {

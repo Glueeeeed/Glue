@@ -25,6 +25,7 @@ A type becomes a nullable type by adding the `?` modifier to its base type, crea
 | Nullable Type | Base Type | Description |
 | :--- | :--- | :--- |
 | `int?` | `int` | Integer that may hold `nulo` |
+| `float?` | `float` | Double that may hold `nulo` |
 | `double?` | `double` | Double that may hold `nulo` |
 | `string?` | `string` | String that may hold `nulo` |
 
