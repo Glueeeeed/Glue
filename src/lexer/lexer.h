@@ -61,11 +61,11 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"boolean", TokenType::TYPE},
     {"float", TokenType::TYPE},
     {"double", TokenType::TYPE},
-    // {"tiny", TokenType::TYPE}, // TODO: move to std library
-    // {"small", TokenType::TYPE}, // TODO: move to std library
+    {"byte", TokenType::TYPE},
+    {"small", TokenType::TYPE},
     {"int", TokenType::TYPE},
-    // {"long", TokenType::TYPE}, // TODO: move to std library
-    // {"huge", TokenType::TYPE}, // TODO: move to std library
+    {"long", TokenType::TYPE},
+    {"huge", TokenType::TYPE},
 };
 
 #endif

@@ -127,7 +127,7 @@ Invoke the compiler by passing your source file:
 ```bash [Linux / macOS]
 ./glue main.glueir
 ```
-w
+
 ```powershell [Windows]
 .\glue.exe main.glueir
 ```

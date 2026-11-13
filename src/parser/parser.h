@@ -16,7 +16,7 @@ public:
 
 class Parser {
     std::vector<Token> tokens;
-        std::vector<std::string> types = {"int", "string", "float", "double", "bool"};
+        std::vector<std::string> types = {"int", "string", "float", "double", "bool", "small", "byte", "long", "huge"};
         int tokenPos = 0;
         AST ast;
         SemanticAnalyzer semantic;

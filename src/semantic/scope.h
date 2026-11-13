@@ -26,6 +26,7 @@ public:
 
     bool declare(const std::string& name, const SymbolInfo& info);
     SymbolInfo* lookup(const std::string& name);
+    SymbolInfo* lookupOriginal(const std::string& name);
 };
 
 #endif // GLUESCRIPTCOMPILER_SCOPE_H

@@ -35,3 +35,19 @@ SymbolInfo* Scope::lookup(const std::string& name) {
     }
     return nullptr;
 }
+
+SymbolInfo* Scope::lookupOriginal(const std::string& name) {
+    // Search from the outermost scope to find the original declaration
+    // Skip the innermost scope (current scope) which may contain narrowed versions
+    if (scopes.size() <= 1) {
+        return lookup(name);
+    }
+    for (size_t i = 0; i < scopes.size() - 1; ++i) {
+        auto found = scopes[i].find(name);
+        if (found != scopes[i].end()) {
+            return &(found->second);
+        }
+    }
+    // If not found in outer scopes, check the innermost scope as fallback
+    return lookup(name);
+}

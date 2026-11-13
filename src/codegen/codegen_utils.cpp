@@ -3,7 +3,21 @@
 
 llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName, bool isNullable) {
     llvm::Type* baseType = nullptr;
-    if (typeName == "int") baseType = builder.getInt32Ty();
+    if (typeName == "int") {
+        baseType = builder.getInt32Ty();
+    }
+    else if (typeName == "small") {
+        baseType = builder.getInt16Ty();
+    }
+    else if (typeName == "byte") {
+        baseType = builder.getInt8Ty();
+    }
+    else if (typeName == "long") {
+        baseType = builder.getInt64Ty();
+    }
+    else if (typeName == "huge") {
+        baseType = builder.getInt128Ty();
+    }
     else if (typeName == "double") baseType = builder.getDoubleTy();
     else if (typeName == "float") baseType = builder.getFloatTy();
     else if (typeName == "bool" || typeName == "boolean") baseType = builder.getInt1Ty();
@@ -39,12 +53,16 @@ llvm::Value* CodeGenerator::toBool(llvm::Value* val) {
 }
 
 NodeType CodeGenerator::getNodeType(const std::string& typeName) {
-     if (typeName == "int") return NodeType::NUMBER;
-     if (typeName == "double") return NodeType::NUMBER_DOUBLE;
-     if (typeName == "float") return NodeType::NUMBER_FLOAT;
-     if (typeName == "bool" || typeName == "boolean") return NodeType::BOOLEAN;
-     if (typeName == "string") return NodeType::STRING;
-        return NodeType::BOND;
+      if (typeName == "int") return NodeType::NUMBER;
+      if (typeName == "small") return NodeType::NUMBER;
+      if (typeName == "byte") return  NodeType::NUMBER;
+      if (typeName == "long") return  NodeType::NUMBER;
+      if (typeName == "huge") return  NodeType::NUMBER;
+      if (typeName == "double") return NodeType::NUMBER_DOUBLE;
+      if (typeName == "float") return NodeType::NUMBER_FLOAT;
+      if (typeName == "bool" || typeName == "boolean") return NodeType::BOOLEAN;
+      if (typeName == "string") return NodeType::STRING;
+         return NodeType::BOND;
 }
 
 void CodeGenerator::generateSrandSeed() {

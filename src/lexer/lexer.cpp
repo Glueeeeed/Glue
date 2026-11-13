@@ -256,8 +256,13 @@ std::vector<Token> lexer(const char* input) {
 
         if (c == '?') {
             int start_column = column;
+            if (i + 1 < len && content[i + 1] == '?') {
+                tokens.push_back({TokenType::COALESCE, "sino", line, start_column});
+                i += 2; column += 2;
+            } else {
                 tokens.push_back({TokenType::QUESTION, "?", line, start_column});
                 i++; column++;
+            }
             continue;
         }
 

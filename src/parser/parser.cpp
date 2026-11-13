@@ -70,7 +70,7 @@ void Parser::parseStatement(ASTNode* parentBlock) {
         parseBlockStatement(parentBlock);
     } else if (token.type == TokenType::KEYWORD && token.value == "return") {
         parseReturnStatement(parentBlock, token);
-    } else if (token.type == TokenType::TYPE || (token.type == TokenType::KEYWORD && (token.value == "const" || token.value == "sticky"))) {
+    } else if (token.type == TokenType::TYPE || (token.type == TokenType::KEYWORD && (token.value == "const" || token.value == "sticky" || token.value == "unsigned"))) {
         parseDeclarationStatement(parentBlock);
     } else if (token.type == TokenType::IDENTIFIER) {
         parseIdentifierStatement(parentBlock, token);
@@ -258,7 +258,6 @@ std::unique_ptr<ASTNode> Parser::parseDeclaration() {
         isSticky = true;
         nextToken();
     }
-
     Token typeToken = currentToken();
     std::string type = typeToken.value;
 

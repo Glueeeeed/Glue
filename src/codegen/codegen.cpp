@@ -332,6 +332,34 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
         } else {
             if (typeName == "int" && rawVal->getType()->isFloatingPointTy()) {
                 rawVal = builder.CreateFPToSI(rawVal, builder.getInt32Ty(), "castit");
+            } else if (typeName == "small") {
+                llvm::Type* smallTy = builder.getInt16Ty();
+                if (rawVal->getType()->isFloatingPointTy()) {
+                    rawVal = builder.CreateFPToSI(rawVal, smallTy, "castsmall");
+                } else if (rawVal->getType()->isIntegerTy(32)) {
+                    rawVal = builder.CreateTrunc(rawVal, smallTy, "castsmall");
+                }
+            } else if (typeName == "byte") {
+                llvm::Type* tinyTy = builder.getInt8Ty();
+                if (rawVal->getType()->isFloatingPointTy()) {
+                    rawVal = builder.CreateFPToSI(rawVal, tinyTy, "casttiny");
+                } else if (rawVal->getType()->isIntegerTy(32)) {
+                    rawVal = builder.CreateTrunc(rawVal, tinyTy, "casttiny");
+                }
+            } else if (typeName == "long") {
+                llvm::Type* longTy = builder.getInt64Ty();
+                if (rawVal->getType()->isFloatingPointTy()) {
+                    rawVal = builder.CreateFPToSI(rawVal, longTy, "castlong");
+                } else if (rawVal->getType()->isIntegerTy(32)) {
+                    rawVal = builder.CreateSExt(rawVal, longTy, "castlong");
+                }
+            } else if (typeName == "huge") {
+                llvm::Type* hugeTy = builder.getInt128Ty();
+                if (rawVal->getType()->isFloatingPointTy()) {
+                    rawVal = builder.CreateFPToSI(rawVal, hugeTy, "casthuge");
+                } else if (rawVal->getType()->isIntegerTy(32)) {
+                    rawVal = builder.CreateSExt(rawVal, hugeTy, "casthuge");
+                }
             } else if (typeName == "double" && !rawVal->getType()->isDoubleTy()) {
                 if (rawVal->getType()->isFloatingPointTy()) {
                     rawVal = builder.CreateFPExt(rawVal, builder.getDoubleTy(), "castd");

@@ -28,7 +28,11 @@ GlueIR provides fundamental primitive types mapped directly to native LLVM repre
 
 | Type | LLVM Equivalent | Description | Example Literal |
 | :--- | :--- | :--- | :--- |
+| `byte` | `i8` | 8-bit signed integer | `127`, `-128` |
+| `small` | `i16` | 16-bit signed integer | `32767`, `-32768` |
 | `int` | `i32` | 32-bit signed integer | `42`, `-10` |
+| `long` | `i64` | 64-bit signed integer | `9223372036854775807` |
+| `huge` | `i128` | 128-bit signed integer | `170141183460469231731687303715884105727` |
 | `float` | `float` | 32-bit single-precision floating point | `3.14f`, `0.5f` |
 | `double` | `double` | 64-bit double-precision floating point | `3.1415926535` |
 | `bool` / `boolean` | `i1` | Boolean logical values | `true`, `false` |
@@ -77,7 +81,7 @@ appStatus = "ready"; // OK: first reassignment allowed
 
 ** Sticky is not allowed in while statement**
 
-Sticky variables is not allowed in `while` statement. Declaration and asignment sticky variables in while statement results in an error.
+Sticky variables are not allowed in `while` statement. Declaration and asignment sticky variables in a while statement result in an error.
 
 :::
 

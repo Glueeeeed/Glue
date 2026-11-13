@@ -197,6 +197,21 @@ bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType va
         return true;
     }
 
+    if (declaredType == "small" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
+        return true;
+    }
+
+    if (declaredType == "byte" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
+        return true;
+    }
+
+    if (declaredType == "long" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
+        return true;
+    }
+
+    if (declaredType == "huge" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
+        return true;
+    }
 
     if (declaredType == "double" && (valueType == NodeType::NUMBER || valueType == NodeType::NUMBER_DOUBLE || valueType == NodeType::NULO)) {
         return true;
@@ -275,7 +290,14 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 
 
     if (!info->isNullable && valueIsNullable) {
-        expect("Compile Error: cannot assign nulo to non-nulo variable '" + varName + "'", valNode->line, valNode->column);
+        // Check if the variable was originally nullable (before type narrowing)
+        SymbolInfo* originalInfo = symbolTable.lookupOriginal(varName);
+        if (originalInfo && originalInfo->isNullable) {
+            // The variable was narrowed from nullable; assigning nulo restores nullable state
+            info->isNullable = true;
+        } else {
+            expect("Compile Error: cannot assign nulo to non-nulo variable '" + varName + "'", valNode->line, valNode->column);
+        }
     }
 }
 
