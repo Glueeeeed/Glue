@@ -183,7 +183,7 @@ while (x != nulo) {
 
 ## `sino` Operator
 
-The `sino` operator (from the Spanish *sino* - “otherwise”) is used to specify a default value when the expression on the left-hand side evaluates to `nulo`. This is known as the **null-coalescing operator**.
+The `sino` operator (from the Spanish **sino** `“otherwise”`) is used to specify a default value when the expression on the left-hand side evaluates to `nulo`. This is known as the **null-coalescing operator**.
 
 As an alternative to the keyword `sino`, you can use the symbol `??`. Both forms are equivalent:
 
