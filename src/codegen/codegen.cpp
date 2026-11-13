@@ -386,6 +386,35 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
         if (rawVal->getType()->isStructTy()) {
             rawVal = builder.CreateExtractValue(rawVal, 1, "unboxed_val");
         }
+        if (typeName == "small") {
+            llvm::Type* smallTy = builder.getInt16Ty();
+            if (rawVal->getType()->isFloatingPointTy()) {
+                rawVal = builder.CreateFPToSI(rawVal, smallTy, "castsmall");
+            } else if (rawVal->getType()->isIntegerTy(32)) {
+                rawVal = builder.CreateTrunc(rawVal, smallTy, "castsmall");
+            }
+        } else if (typeName == "byte") {
+            llvm::Type* tinyTy = builder.getInt8Ty();
+            if (rawVal->getType()->isFloatingPointTy()) {
+                rawVal = builder.CreateFPToSI(rawVal, tinyTy, "casttiny");
+            } else if (rawVal->getType()->isIntegerTy(32)) {
+                rawVal = builder.CreateTrunc(rawVal, tinyTy, "casttiny");
+            }
+        } else if (typeName == "long") {
+            llvm::Type* longTy = builder.getInt64Ty();
+            if (rawVal->getType()->isFloatingPointTy()) {
+                rawVal = builder.CreateFPToSI(rawVal, longTy, "castlong");
+            } else if (rawVal->getType()->isIntegerTy(32)) {
+                rawVal = builder.CreateSExt(rawVal, longTy, "castlong");
+            }
+        } else if (typeName == "huge") {
+            llvm::Type* hugeTy = builder.getInt128Ty();
+            if (rawVal->getType()->isFloatingPointTy()) {
+                rawVal = builder.CreateFPToSI(rawVal, hugeTy, "casthuge");
+            } else if (rawVal->getType()->isIntegerTy(32)) {
+                rawVal = builder.CreateSExt(rawVal, hugeTy, "casthuge");
+            }
+        }
         builder.CreateStore(rawVal, allocaInst);
     }
 
