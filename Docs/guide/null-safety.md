@@ -9,7 +9,7 @@ The system draws inspiration from languages such as Kotlin, Swift, TypeScript, a
 
 ## The `nulo` Literal
 
-`nulo` is a keyword and literal that represents the absence of a value. The name is borrowed from **Spanish**, where *nulo* means "null" or "zero". It can be assigned to any **nullable** type.
+`nulo` is a keyword and literal that represents the absence of a value. The name is borrowed from **Spanish**, where *nulo* means "null". It can be assigned to any **nullable** type.
 
 ```c
 int? x = nulo;
