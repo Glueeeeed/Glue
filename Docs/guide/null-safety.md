@@ -181,7 +181,7 @@ while (x != nulo) {
 // After the loop, x is always nulo (the loop terminated because x == nulo)
 ```
 
-## `sino` Operator
+## `Sino` Operator
 
 The `sino` operator (from the Spanish **sino** `“otherwise”`) is used to specify a default value when the expression on the left-hand side evaluates to `nulo`. This is known as the **null-coalescing operator**.
 

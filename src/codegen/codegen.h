@@ -31,6 +31,7 @@ class CodeGenerator {
     std::unique_ptr<llvm::Module> module;
     llvm::IRBuilder<> builder;
     llvm::BasicBlock* currentExitBlock;
+    llvm::AllocaInst* returnValue = nullptr;
     llvm::Function* printf = nullptr;
     llvm::Function* currentFunction = nullptr;
     void enterScope();

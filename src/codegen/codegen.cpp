@@ -109,6 +109,8 @@ void CodeGenerator::generate(const ASTNode *node) {
 
             if (funcName == "main") {
                 this->currentExitBlock = llvm::BasicBlock::Create(context, "exit", func);
+                this->returnValue = createEntryAlloca(func, builder, builder.getInt32Ty(), "returnValue");
+                builder.CreateStore(builder.getInt32(0), this->returnValue);
             }
             llvm::BasicBlock *ExitBB = this->currentExitBlock;
 
@@ -130,16 +132,31 @@ void CodeGenerator::generate(const ASTNode *node) {
 
                 builder.SetInsertPoint(ExitBB);
 
-                auto exitInfo = module->getOrInsertFunction(
-                    "printf", llvm::FunctionType::get(builder.getInt32Ty(), {builder.getPtrTy()}, true));
-                builder.CreateCall(
-                    exitInfo, builder.CreateGlobalString("Program completed successfully. Press Enter to exit.\n"));
+                auto printfType = llvm::FunctionType::get(
+                    builder.getInt32Ty(),
+                    {builder.getPtrTy()},
+                    true
+                );
+                auto printfFunc = module->getOrInsertFunction("printf", printfType);
 
-                auto *getcharType = llvm::FunctionType::get(builder.getInt32Ty(), false);
-                auto getcharFunc = module->getOrInsertFunction("getchar", getcharType);
+                llvm::Value *retValLoaded = builder.CreateLoad(builder.getInt32Ty(), this->returnValue, "retValLoaded");
+
+                auto exitMsgFormat = builder.CreateGlobalString(
+                    "\nProgram completed with exit code %d.\nPress Enter to exit.\n",
+                    "fmt_exit_code"
+                );
+
+                builder.CreateCall(printfFunc, {exitMsgFormat, retValLoaded});
+
+                auto fflushFunc = module->getOrInsertFunction("fflush", printfType);
+                builder.CreateCall(fflushFunc, {llvm::ConstantPointerNull::get(builder.getPtrTy())});
+
+                auto getcharFunc = module->getOrInsertFunction("getchar", llvm::FunctionType::get(builder.getInt32Ty(), false));
                 builder.CreateCall(getcharFunc);
 
-                builder.CreateRet(builder.getInt32(0));
+
+                llvm::Value *retValFinal = builder.CreateLoad(builder.getInt32Ty(), this->returnValue, "retValFinal");
+                builder.CreateRet(retValFinal);
             } else {
                 if (!builder.GetInsertBlock()->getTerminator()) {
                     if (currentFunction->getReturnType()->isVoidTy()) {
@@ -161,6 +178,24 @@ void CodeGenerator::generate(const ASTNode *node) {
         }
         case NodeType::RETURN_STATEMENT:
             if (currentFunction->getName() == "main") {
+                if (!node->children.empty()) {
+                    const ASTNode *retExpr = node->children[0].get();
+                    llvm::Value *retVal = visitExpression(retExpr);
+                    if (retVal->getType()->isIntegerTy(1)) {
+                        retVal = builder.CreateZExt(retVal, builder.getInt32Ty(), "retbool");
+                    } else if (retVal->getType()->isIntegerTy(16)) {
+                        retVal = builder.CreateSExt(retVal, builder.getInt32Ty(), "retsmall");
+                    } else if (retVal->getType()->isIntegerTy(8)) {
+                        retVal = builder.CreateSExt(retVal, builder.getInt32Ty(), "rettiny");
+                    } else if (retVal->getType()->isIntegerTy(64)) {
+                        retVal = builder.CreateTrunc(retVal, builder.getInt32Ty(), "retlong");
+                    } else if (retVal->getType()->isIntegerTy(128)) {
+                        retVal = builder.CreateTrunc(retVal, builder.getInt32Ty(), "rethuge");
+                    } else if (retVal->getType()->isFloatingPointTy()) {
+                        retVal = builder.CreateFPToSI(retVal, builder.getInt32Ty(), "retfloat");
+                    }
+                    builder.CreateStore(retVal, this->returnValue);
+                }
                 builder.CreateBr(this->currentExitBlock);
             } else if (!node->children.empty()) {
                 const ASTNode *retExpr = node->children[0].get();
