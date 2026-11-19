@@ -1,6 +1,6 @@
 # Functions & I/O
 
-Functions, built-in helpers, and input/output form the core of program logic and interaction in GlueIR.
+Functions, built-in helpers, and input/output form the core of program logic and interaction in Glue.
 
 ---
 
@@ -41,7 +41,7 @@ At code generation time, the compiler automatically handles the `main` entry poi
 :::
 
 
-GlueIR provides built-in functions for console input/output, random number generation, and type conversions:
+Glue provides built-in functions for console input/output, random number generation, and type conversions:
 
 ### 1. Standard Output: `shout(...)`
 A variadic function accepting multiple comma-separated expressions of any standard type:

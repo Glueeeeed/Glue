@@ -9,7 +9,7 @@ The **Glue** compiler is a multi-phase, ahead-of-time (AOT) compiler that transl
 ```
                     ┌─────────────────────────┐
                     │    GlueIR Source Code     │
-                    │        (*.glueir)         │
+                    │        (*.glue)         │
                     └────────────┬────────────┘
                                  │
                                  ▼

@@ -1,6 +1,6 @@
 # Getting Started with Glue
 
-Welcome to **GlueIR** is a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
+Welcome to **Glue** is a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
 
 This guide walks you through installing dependencies, building the GlueIR compiler from source, and compiling your first program on **Linux**, **macOS**, and **Windows**.
 
@@ -8,13 +8,13 @@ This guide walks you through installing dependencies, building the GlueIR compil
 
 ## System Requirements
 
-To build the GlueIR compiler, ensure you have the following installed on your machine:
+To build the Glue compiler, ensure you have the following installed on your machine:
 - **C++ Compiler**: Supporting `C++20` standard (GCC 11+, Clang 13+, or MSVC 2019/2022)
 - **CMake**: Version `3.20` or higher
 - **LLVM & Clang**: Developer libraries, headers, and `clang` (LLVM 22 required)
 
 ::: warning
-LLVM 22 is required for all features and optimizations in GlueIR.
+LLVM 22 is required for all features and optimizations in Glue.
 Versions newer than 22 may be incompatible because LLVM drastically changes its API with each new version.
 :::
 
@@ -109,11 +109,11 @@ Upon a successful build, the `glue` (or `glue.exe` on Windows) compiler executab
 
 ## Your First Glue Program
 
-Create a source file named `main.glueir`:
+Create a source file named `main.glue`:
 
 ```c
 func int main() {
-    shout("Hello from GlueIR!");
+    shout("Hello from Glue!");
     return 0;
 }
 ```
@@ -125,11 +125,11 @@ Invoke the compiler by passing your source file:
 ::: code-group
 
 ```bash [Linux / macOS]
-./glue main.glueir
+./glue main.glue
 ```
 
 ```powershell [Windows]
-.\glue.exe main.glueir
+.\glue.exe main.glue
 ```
 
 :::

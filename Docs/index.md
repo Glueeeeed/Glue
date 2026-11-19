@@ -2,7 +2,7 @@
 layout: home
 
 hero:
-  name: "GlueIR Lang"
+  name: "Glue"
   text: "A Minimalist, procedural compiled Language"
   tagline: "High performance AOT compilation via LLVM with a streamlined syntax."
   actions:

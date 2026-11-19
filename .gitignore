@@ -2,4 +2,4 @@ build/
 .cache/
 cache/
 node_modules/
-Examples/test.glueir
+Examples/test.glue

@@ -1,6 +1,6 @@
 # Control Flow & Conditions
 
-GlueIR provides standard control flow constructs: branching with `if` / `else` statements and iteration with `while` loops.
+Glue provides standard control flow constructs: branching with `if` / `else` statements and iteration with `while` loops.
 
 ---
 
@@ -45,7 +45,7 @@ func int main() {
 
 ## Operators & Precedence
 
-GlueIR provides standard mathematical, relational, and boolean operators:
+Glue provides standard mathematical, relational, and boolean operators:
 
 - **Arithmetic**: `+`, `-`, `*`, `/`
 - **Comparison**: `==`, `!=`, `<`, `<=`, `>`, `>=`
@@ -62,7 +62,7 @@ Evaluation follows standard algebraic and boolean rules:
 6. Logical OR: `or`, `||`
 
 ::: tip Automatic Type Promotion
-GlueIR automatically promotes mixed numerical operations:
+Glue automatically promotes mixed numerical operations:
 - When an integer (`int`) interacts with a floating-point value (`float`/`double`), the integer is cast to float (`sitofp`).
 - Operations between `float` and `double` promote the result to `double`.
 :::

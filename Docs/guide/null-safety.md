@@ -1,6 +1,6 @@
 # Null safety System
 
-GlueIR introduces a **Null Safety** system centered around the `nulo` literal (the equivalent of `null`/`nil`). Its primary goal is to completely eliminate `NullPointerException`
+Glue introduces a **Null Safety** system centered around the `nulo` literal (the equivalent of `null`/`nil`). Its primary goal is to completely eliminate `NullPointerException`
 style errors and undefined behavior at runtime.
 
 The system draws inspiration from languages such as Kotlin, Swift, TypeScript, and C#.
@@ -34,7 +34,7 @@ A type becomes a nullable type by adding the `?` modifier to its base type, crea
 | `string?` | `string` | String that may hold `nulo` |
 
 ::: warning Boolean Nullability
-The `bool` type **cannot** be nullable. There is no `bool?` type in GlueIR a boolean value is always either `true` or `false`, never `nulo`.
+The `bool` type **cannot** be nullable. There is no `bool?` type in Glue a boolean value is always either `true` or `false`, never `nulo`.
 :::
 
 
@@ -253,5 +253,5 @@ int result = a sino b sino c sino 0;  // Result: 100 (first non-nulo value)
 ---
 
 ::: tip Design Philosophy
-The Nulo system ensures that null-related errors are caught at **compile time**, not runtime. By making nullability explicit in the type system and narrowing types through flow analysis, GlueIR eliminates an entire class of bugs without requiring manual null checks throughout the codebase.
+The Nulo system ensures that null-related errors are caught at **compile time**, not runtime. By making nullability explicit in the type system and narrowing types through flow analysis, Glue eliminates an entire class of bugs without requiring manual null checks throughout the codebase.
 ::::
