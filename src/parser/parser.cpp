@@ -2,9 +2,6 @@
 #include "parser.h"
 #include "../AST/ast.h"
 #include <complex>
-#include <functional>
-#include <functional>
-#include <iostream>
 
 #include "../semantic/semantic.h"
 
@@ -70,7 +67,7 @@ void Parser::parseStatement(ASTNode* parentBlock) {
         parseBlockStatement(parentBlock);
     } else if (token.type == TokenType::KEYWORD && token.value == "return") {
         parseReturnStatement(parentBlock, token);
-    } else if (token.type == TokenType::TYPE || (token.type == TokenType::KEYWORD && (token.value == "const" || token.value == "sticky" || token.value == "unsigned"))) {
+    } else if (token.type == TokenType::TYPE || (token.type == TokenType::KEYWORD && (token.value == "const" || token.value == "sticky"))) {
         parseDeclarationStatement(parentBlock);
     } else if (token.type == TokenType::IDENTIFIER) {
         parseIdentifierStatement(parentBlock, token);
@@ -78,7 +75,7 @@ void Parser::parseStatement(ASTNode* parentBlock) {
         parseIfStatement(parentBlock, token);
     } else if (token.type == TokenType::KEYWORD && token.value == "while") {
         parseWhileStatement(parentBlock, token);
-    } else if (token.type == TokenType::KEYWORD && (token.value == "shout" || token.value == "Shout" || token.value == "shin")) {
+    } else if (token.type == TokenType::KEYWORD && (token.value == "shout" || token.value == "shin")) {
         parseCallStatement(parentBlock);
     } else if (token.type == TokenType::KEYWORD && token.value == "fin") {
         parseBreakStatement(parentBlock, token);

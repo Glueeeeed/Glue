@@ -9,8 +9,24 @@ std::unique_ptr<ASTNode> AST::makeString(const std::string& value, int line, int
     return std::make_unique<ASTNode>(NodeType::STRING, value, false, false, false, false, line, column);
 }
 
+std::unique_ptr<ASTNode> AST::makeByte(const std::string& value1, int line, int column) {
+    return std::make_unique<ASTNode>(NodeType::NUMBER_BYTE, value1, false, false, false, false, line, column);
+}
+
+std::unique_ptr<ASTNode> AST::makeSmall(const std::string& value1, int line, int column) {
+    return std::make_unique<ASTNode>(NodeType::NUMBER_SMALL, value1, false, false, false, false, line, column);
+}
+
 std::unique_ptr<ASTNode> AST::makeNumber(const std::string& value1, int line, int column) {
     return std::make_unique<ASTNode>(NodeType::NUMBER, value1, false, false, false, false, line, column);
+}
+
+std::unique_ptr<ASTNode> AST::makeLong(const std::string& value1, int line, int column) {
+    return std::make_unique<ASTNode>(NodeType::NUMBER_LONG, value1, false, false, false, false, line, column);
+}
+
+std::unique_ptr<ASTNode> AST::makeHuge(const std::string& value1, int line, int column) {
+    return std::make_unique<ASTNode>(NodeType::NUMBER_HUGE, value1, false, false, false, false, line, column);
 }
 
 std::unique_ptr<ASTNode> AST::makeDouble(const std::string& value1, int line, int column) {

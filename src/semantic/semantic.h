@@ -28,6 +28,9 @@ public:
     void declareSymbol(const ASTNode* node, bool isConst, bool stickyUsed, bool isSticky);
     static void expect(std::string msg, int line = 0, int column = 0);
 
+    static int getTypePriority(NodeType t);
+    static NodeType promoteTypes(NodeType left, NodeType right);
+
     // utils
 
     std::string nodeTypeToString(NodeType t);

@@ -3,9 +3,51 @@
 #include "scope.h"
 #include <sstream>
 
+// Priority order (lowest to highest):
+// byte(0) < small(1) < int(2) < long(3) < huge(4) < float(5) < double(6)
+int SemanticAnalyzer::getTypePriority(NodeType t) {
+    switch (t) {
+        case NodeType::NUMBER_BYTE:   return 0;
+        case NodeType::NUMBER_SMALL:  return 1;
+        case NodeType::NUMBER:        return 2;
+        case NodeType::NUMBER_LONG:   return 3;
+        case NodeType::NUMBER_HUGE:   return 4;
+        case NodeType::NUMBER_FLOAT:  return 5;
+        case NodeType::NUMBER_DOUBLE: return 6;
+        default:                      return -1;
+    }
+}
+
+NodeType SemanticAnalyzer::promoteTypes(NodeType left, NodeType right) {
+    int leftPri = getTypePriority(left);
+    int rightPri = getTypePriority(right);
+
+    // If either type is not a numeric type with priority, return the higher one or left
+    if (leftPri < 0 && rightPri < 0) {
+        return left;
+    }
+    if (leftPri < 0) {
+        return right;
+    }
+    if (rightPri < 0) {
+        return left;
+    }
+
+    // Return the type with higher priority
+    if (leftPri >= rightPri) {
+        return left;
+    } else {
+        return right;
+    }
+}
+
 std::string SemanticAnalyzer::nodeTypeToString(NodeType t) {
     switch (t) {
         case NodeType::NUMBER: return "'int'";
+        case NodeType::NUMBER_BYTE: return "'byte'";
+        case NodeType::NUMBER_SMALL: return "'small'";
+        case NodeType::NUMBER_LONG: return "'long'";
+        case NodeType::NUMBER_HUGE: return "'huge'";
         case NodeType::NUMBER_DOUBLE: return "'double'";
         case NodeType::STRING: return "'string'";
         case NodeType::NUMBER_FLOAT : return "'float'";
@@ -90,7 +132,18 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
     NodeType valueType = inferType(valNode);
     bool valueIsNullable = isExprNullable(valNode);
 
-    if (!isCompatible(varType, valueType)) {
+
+    if (varType == "byte") typeNode->type = NodeType::NUMBER_BYTE;
+    else if (varType == "small") typeNode->type = NodeType::NUMBER_SMALL;
+    else if (varType == "int") typeNode->type = NodeType::NUMBER;
+    else if (varType == "long") typeNode->type = NodeType::NUMBER_LONG;
+    else if (varType == "huge") typeNode->type = NodeType::NUMBER_HUGE;
+    else if (varType == "float") typeNode->type = NodeType::NUMBER_FLOAT;
+    else if (varType == "double") typeNode->type = NodeType::NUMBER_DOUBLE;
+
+
+
+    if (!isCompatible(varType, typeNode->type)) {
         expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " + varTypeFormatted, valNode->line, valNode->column);
     }
 
@@ -171,10 +224,8 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
 
             if (node->value == "==" || node->value == ">" || node->value == "<" || node->value == ">=" || node->value == "<=" || node->value == "!=") return NodeType::BOOLEAN;
 
-            if (leftType == NodeType::NUMBER_DOUBLE || rightType == NodeType::NUMBER_DOUBLE) return NodeType::NUMBER_DOUBLE;
-            if (leftType == NodeType::NUMBER_FLOAT || rightType == NodeType::NUMBER_FLOAT) return NodeType::NUMBER_FLOAT;
-
-            return NodeType::NUMBER;
+            // Use type promotion based on priority
+            return promoteTypes(leftType, rightType);
         }
 
         case NodeType::IDENTIFIER: {
@@ -193,35 +244,35 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
 
 bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType valueType) {
 
+    if (declaredType == "byte" && (valueType == NodeType::NUMBER_BYTE || valueType == NodeType::NULO)) {
+        return true;
+    }
+
+    if (declaredType == "small" && (valueType == NodeType::NUMBER_SMALL || valueType == NodeType::NULO)) {
+        return true;
+    }
+
     if (declaredType == "int" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
         return true;
     }
 
-    if (declaredType == "small" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
+    if (declaredType == "long" && (valueType == NodeType::NUMBER_LONG || valueType == NodeType::NULO)) {
         return true;
     }
 
-    if (declaredType == "byte" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
-        return true;
-    }
-
-    if (declaredType == "long" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
-        return true;
-    }
-
-    if (declaredType == "huge" && (valueType == NodeType::NUMBER || valueType == NodeType::NULO)) {
-        return true;
-    }
-
-    if (declaredType == "double" && (valueType == NodeType::NUMBER || valueType == NodeType::NUMBER_DOUBLE || valueType == NodeType::NULO)) {
-        return true;
-    }
-
-    if (declaredType == "string" && (valueType == NodeType::STRING || valueType == NodeType::NULO)) {
+    if (declaredType == "huge" && (valueType == NodeType::NUMBER_HUGE || valueType == NodeType::NULO)) {
         return true;
     }
 
     if (declaredType == "float" && (valueType == NodeType::NUMBER_FLOAT || valueType == NodeType::NULO)) {
+        return true;
+    }
+
+    if (declaredType == "double" && (valueType == NodeType::NUMBER_DOUBLE || valueType == NodeType::NULO)) {
+        return true;
+    }
+
+    if (declaredType == "string" && (valueType == NodeType::STRING || valueType == NodeType::NULO)) {
         return true;
     }
 

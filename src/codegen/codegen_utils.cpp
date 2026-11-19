@@ -53,13 +53,13 @@ llvm::Value* CodeGenerator::toBool(llvm::Value* val) {
 }
 
 NodeType CodeGenerator::getNodeType(const std::string& typeName) {
+      if (typeName == "byte") return NodeType::NUMBER_BYTE;
+      if (typeName == "small") return NodeType::NUMBER_SMALL;
       if (typeName == "int") return NodeType::NUMBER;
-      if (typeName == "small") return NodeType::NUMBER;
-      if (typeName == "byte") return  NodeType::NUMBER;
-      if (typeName == "long") return  NodeType::NUMBER;
-      if (typeName == "huge") return  NodeType::NUMBER;
-      if (typeName == "double") return NodeType::NUMBER_DOUBLE;
+      if (typeName == "long") return NodeType::NUMBER_LONG;
+      if (typeName == "huge") return NodeType::NUMBER_HUGE;
       if (typeName == "float") return NodeType::NUMBER_FLOAT;
+      if (typeName == "double") return NodeType::NUMBER_DOUBLE;
       if (typeName == "bool" || typeName == "boolean") return NodeType::BOOLEAN;
       if (typeName == "string") return NodeType::STRING;
          return NodeType::BOND;

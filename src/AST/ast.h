@@ -23,6 +23,10 @@ enum class NodeType {
     IDENTIFIER,
     STRING,
     NUMBER,
+    NUMBER_BYTE,
+    NUMBER_SMALL,
+    NUMBER_LONG,
+    NUMBER_HUGE,
     NUMBER_DOUBLE,
     NUMBER_FLOAT,
     NULO,
@@ -33,7 +37,7 @@ enum class NodeType {
 };
 
 struct ASTNode {
-    NodeType type;
+    mutable NodeType type;
     std::string value;
     bool isConst;
     bool isSticky;
@@ -56,7 +60,11 @@ class AST {
     void startProgramTree();
     std::vector<std::unique_ptr<ASTNode>> args;
     std::unique_ptr<ASTNode> makeString(const std::string& value, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeByte(const std::string& value1, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeSmall(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeNumber(const std::string& value1, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeLong(const std::string& value1, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeHuge(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeDouble(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeFloat(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeBool(const std::string& name, int line = 0, int column = 0);

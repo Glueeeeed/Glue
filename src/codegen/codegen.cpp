@@ -485,9 +485,49 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
             return;
         }
 
-        if (var->nodeType == NodeType::NUMBER) {
+        if (var->nodeType == NodeType::NUMBER_BYTE) {
+            llvm::Type* tinyTy = builder.getInt8Ty();
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPToSI(val, tinyTy, "casttiny");
+            } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(8)) {
+                val = builder.CreateTrunc(val, tinyTy, "casttiny");
+            }
+        } else if (var->nodeType == NodeType::NUMBER_SMALL) {
+            llvm::Type* smallTy = builder.getInt16Ty();
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPToSI(val, smallTy, "castsmall");
+            } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(16)) {
+                if (val->getType()->isIntegerTy(1)) {
+                    val = builder.CreateZExt(val, smallTy, "castsmall");
+                } else {
+                    val = builder.CreateTrunc(val, smallTy, "castsmall");
+                }
+            }
+        } else if (var->nodeType == NodeType::NUMBER) {
             if (val->getType()->isFloatingPointTy()) {
                 val = builder.CreateFPToSI(val, builder.getInt32Ty(), "castit");
+            } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(32)) {
+                if (val->getType()->isIntegerTy(1)) {
+                    val = builder.CreateZExt(val, builder.getInt32Ty(), "castit");
+                } else if (val->getType()->getIntegerBitWidth() < 32) {
+                    val = builder.CreateSExt(val, builder.getInt32Ty(), "castit");
+                } else {
+                    val = builder.CreateTrunc(val, builder.getInt32Ty(), "castit");
+                }
+            }
+        } else if (var->nodeType == NodeType::NUMBER_LONG) {
+            llvm::Type* longTy = builder.getInt64Ty();
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPToSI(val, longTy, "castlong");
+            } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(64)) {
+                val = builder.CreateSExt(val, longTy, "castlong");
+            }
+        } else if (var->nodeType == NodeType::NUMBER_HUGE) {
+            llvm::Type* hugeTy = builder.getInt128Ty();
+            if (val->getType()->isFloatingPointTy()) {
+                val = builder.CreateFPToSI(val, hugeTy, "casthuge");
+            } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(128)) {
+                val = builder.CreateSExt(val, hugeTy, "casthuge");
             }
         } else if (var->nodeType == NodeType::NUMBER_DOUBLE) {
             if (!val->getType()->isDoubleTy()) {
@@ -530,9 +570,49 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
         val = builder.CreateExtractValue(val, 1, "unboxed_val");
     }
 
-    if (var->nodeType == NodeType::NUMBER) {
+    if (var->nodeType == NodeType::NUMBER_BYTE) {
+        llvm::Type* tinyTy = builder.getInt8Ty();
+        if (val->getType()->isFloatingPointTy()) {
+            val = builder.CreateFPToSI(val, tinyTy, "casttiny");
+        } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(8)) {
+            val = builder.CreateTrunc(val, tinyTy, "casttiny");
+        }
+    } else if (var->nodeType == NodeType::NUMBER_SMALL) {
+        llvm::Type* smallTy = builder.getInt16Ty();
+        if (val->getType()->isFloatingPointTy()) {
+            val = builder.CreateFPToSI(val, smallTy, "castsmall");
+        } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(16)) {
+            if (val->getType()->isIntegerTy(1)) {
+                val = builder.CreateZExt(val, smallTy, "castsmall");
+            } else {
+                val = builder.CreateTrunc(val, smallTy, "castsmall");
+            }
+        }
+    } else if (var->nodeType == NodeType::NUMBER) {
         if (val->getType()->isFloatingPointTy()) {
             val = builder.CreateFPToSI(val, builder.getInt32Ty(), "castit");
+        } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(32)) {
+            if (val->getType()->isIntegerTy(1)) {
+                val = builder.CreateZExt(val, builder.getInt32Ty(), "castit");
+            } else if (val->getType()->getIntegerBitWidth() < 32) {
+                val = builder.CreateSExt(val, builder.getInt32Ty(), "castit");
+            } else {
+                val = builder.CreateTrunc(val, builder.getInt32Ty(), "castit");
+            }
+        }
+    } else if (var->nodeType == NodeType::NUMBER_LONG) {
+        llvm::Type* longTy = builder.getInt64Ty();
+        if (val->getType()->isFloatingPointTy()) {
+            val = builder.CreateFPToSI(val, longTy, "castlong");
+        } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(64)) {
+            val = builder.CreateSExt(val, longTy, "castlong");
+        }
+    } else if (var->nodeType == NodeType::NUMBER_HUGE) {
+        llvm::Type* hugeTy = builder.getInt128Ty();
+        if (val->getType()->isFloatingPointTy()) {
+            val = builder.CreateFPToSI(val, hugeTy, "casthuge");
+        } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(128)) {
+            val = builder.CreateSExt(val, hugeTy, "casthuge");
         }
     } else if (var->nodeType == NodeType::NUMBER_DOUBLE) {
         if (!val->getType()->isDoubleTy()) {
@@ -769,8 +849,20 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
     if (!node) return nullptr;
 
     switch (node->type) {
+        case NodeType::NUMBER_BYTE:
+            return builder.getInt8(std::stoi(node->value));
+        case NodeType::NUMBER_SMALL:
+            return builder.getInt16(std::stoi(node->value));
         case NodeType::NUMBER:
             return builder.getInt32(std::stoi(node->value));
+        case NodeType::NUMBER_LONG:
+            return builder.getInt64(std::stoll(node->value));
+        case NodeType::NUMBER_HUGE: {
+            // Parse 128-bit integer manually
+            std::string val = node->value;
+            llvm::APInt intVal(128, val, 10);
+            return llvm::ConstantInt::get(context, intVal);
+        }
         case NodeType::NUMBER_DOUBLE:
             return llvm::ConstantFP::get(context, llvm::APFloat(std::stod(node->value)));
         case NodeType::NUMBER_FLOAT:
@@ -911,6 +1003,30 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
 
             bool isLFP = L->getType()->isFloatingPointTy();
             bool isRFP = R->getType()->isFloatingPointTy();
+
+            // Promote integer types to the wider type
+            if (!isLFP && !isRFP && L->getType()->isIntegerTy() && R->getType()->isIntegerTy()) {
+                unsigned lBits = L->getType()->getIntegerBitWidth();
+                unsigned rBits = R->getType()->getIntegerBitWidth();
+
+                if (lBits != rBits) {
+                    if (lBits < rBits) {
+                        // Promote L to R's width
+                        if (lBits == 1) {
+                            L = builder.CreateZExt(L, R->getType(), "promotel");
+                        } else {
+                            L = builder.CreateSExt(L, R->getType(), "promotel");
+                        }
+                    } else {
+                        // Promote R to L's width
+                        if (rBits == 1) {
+                            R = builder.CreateZExt(R, L->getType(), "promoter");
+                        } else {
+                            R = builder.CreateSExt(R, L->getType(), "promoter");
+                        }
+                    }
+                }
+            }
 
             if (isLFP && !isRFP) {
                 R = builder.CreateSIToFP(R, L->getType(), "promoter");
