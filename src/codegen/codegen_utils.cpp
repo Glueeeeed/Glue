@@ -15,9 +15,6 @@ llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName, bool isNulla
     else if (typeName == "long") {
         baseType = builder.getInt64Ty();
     }
-    else if (typeName == "huge") {
-        baseType = builder.getInt128Ty();
-    }
     else if (typeName == "double") baseType = builder.getDoubleTy();
     else if (typeName == "float") baseType = builder.getFloatTy();
     else if (typeName == "bool" || typeName == "boolean") baseType = builder.getInt1Ty();
@@ -57,7 +54,6 @@ NodeType CodeGenerator::getNodeType(const std::string& typeName) {
       if (typeName == "small") return NodeType::NUMBER_SMALL;
       if (typeName == "int") return NodeType::NUMBER;
       if (typeName == "long") return NodeType::NUMBER_LONG;
-      if (typeName == "huge") return NodeType::NUMBER_HUGE;
       if (typeName == "float") return NodeType::NUMBER_FLOAT;
       if (typeName == "double") return NodeType::NUMBER_DOUBLE;
       if (typeName == "bool" || typeName == "boolean") return NodeType::BOOLEAN;

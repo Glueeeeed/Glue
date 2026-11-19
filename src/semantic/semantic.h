@@ -30,6 +30,7 @@ public:
 
     static int getTypePriority(NodeType t);
     static NodeType promoteTypes(NodeType left, NodeType right);
+    bool isNarrowingConversion(const std::string& declaredType, NodeType valueType);
 
     // utils
 
@@ -44,6 +45,8 @@ public:
     void visitReturn(const ASTNode* node);
     void visitIf(const ASTNode* node);
     void visitWhile(const ASTNode* node);
+    void warn(std::string msg, int line, int column);
+    static bool literalFitsInType(const std::string& literalValue, const std::string& targetType);
 
 };
 

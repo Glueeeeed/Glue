@@ -63,9 +63,8 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"double", TokenType::TYPE},
     {"byte", TokenType::TYPE},
     {"small", TokenType::TYPE},
-    {"int", TokenType::TYPE},
-    {"long", TokenType::TYPE},
-    {"huge", TokenType::TYPE},
+     {"int", TokenType::TYPE},
+     {"long", TokenType::TYPE},
 };
 
 #endif

@@ -26,7 +26,6 @@ enum class NodeType {
     NUMBER_BYTE,
     NUMBER_SMALL,
     NUMBER_LONG,
-    NUMBER_HUGE,
     NUMBER_DOUBLE,
     NUMBER_FLOAT,
     NULO,
@@ -64,7 +63,6 @@ class AST {
     std::unique_ptr<ASTNode> makeSmall(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeNumber(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeLong(const std::string& value1, int line = 0, int column = 0);
-    std::unique_ptr<ASTNode> makeHuge(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeDouble(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeFloat(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeBool(const std::string& name, int line = 0, int column = 0);

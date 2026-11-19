@@ -7,7 +7,6 @@ NodeType SemanticAnalyzer::mapStringToNodeType(std::string_view typeStr) const {
         {"small", NodeType::NUMBER_SMALL},
         {"int", NodeType::NUMBER},
         {"long", NodeType::NUMBER_LONG},
-        {"huge", NodeType::NUMBER_HUGE},
         {"float", NodeType::NUMBER_FLOAT},
         {"double", NodeType::NUMBER_DOUBLE},
         {"string", NodeType::STRING},
@@ -119,7 +118,6 @@ void SemanticAnalyzer::checkDivisionByZero(const ASTNode* rightChild, int line, 
                              rightChild->type == NodeType::NUMBER_BYTE ||
                              rightChild->type == NodeType::NUMBER_SMALL ||
                              rightChild->type == NodeType::NUMBER_LONG ||
-                             rightChild->type == NodeType::NUMBER_HUGE ||
                              rightChild->type == NodeType::NUMBER_DOUBLE ||
                              rightChild->type == NodeType::NUMBER_FLOAT);
 
@@ -173,7 +171,7 @@ void SemanticAnalyzer::visitIf(const ASTNode* node) {
     NodeType condType = inferType(condNode);
     if (condType != NodeType::BOOLEAN && condType != NodeType::NUMBER &&
         condType != NodeType::NUMBER_BYTE && condType != NodeType::NUMBER_SMALL &&
-        condType != NodeType::NUMBER_LONG && condType != NodeType::NUMBER_HUGE &&
+        condType != NodeType::NUMBER_LONG &&
         condType != NodeType::NUMBER_DOUBLE && condType != NodeType::NUMBER_FLOAT) {
         expect("Compile Error: If statement condition must be of type boolean or number", node->line, node->column);
     }
@@ -244,7 +242,7 @@ void SemanticAnalyzer::visitWhile(const ASTNode* node) {
 
     if (!isCondNullable && condType != NodeType::BOOLEAN && condType != NodeType::NUMBER &&
         condType != NodeType::NUMBER_BYTE && condType != NodeType::NUMBER_SMALL &&
-        condType != NodeType::NUMBER_LONG && condType != NodeType::NUMBER_HUGE &&
+        condType != NodeType::NUMBER_LONG &&
         condType != NodeType::NUMBER_DOUBLE && condType != NodeType::NUMBER_FLOAT) {
         expect("Compile Error: While loop condition must be of boolean, numeric, or nullable type", node->line, node->column);
         }

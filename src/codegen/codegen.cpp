@@ -189,8 +189,6 @@ void CodeGenerator::generate(const ASTNode *node) {
                         retVal = builder.CreateSExt(retVal, builder.getInt32Ty(), "rettiny");
                     } else if (retVal->getType()->isIntegerTy(64)) {
                         retVal = builder.CreateTrunc(retVal, builder.getInt32Ty(), "retlong");
-                    } else if (retVal->getType()->isIntegerTy(128)) {
-                        retVal = builder.CreateTrunc(retVal, builder.getInt32Ty(), "rethuge");
                     } else if (retVal->getType()->isFloatingPointTy()) {
                         retVal = builder.CreateFPToSI(retVal, builder.getInt32Ty(), "retfloat");
                     }
@@ -353,6 +351,7 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
     std::string typeName = typeNode->value;
     bool isNullable = idNode->isNullable;
 
+
     llvm::Type *varType = getLLVMType(typeName, isNullable);
     auto *allocaInst = createEntryAlloca(currentFunction, builder, varType, varName);
 
@@ -387,13 +386,6 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
                     rawVal = builder.CreateFPToSI(rawVal, longTy, "castlong");
                 } else if (rawVal->getType()->isIntegerTy(32)) {
                     rawVal = builder.CreateSExt(rawVal, longTy, "castlong");
-                }
-            } else if (typeName == "huge") {
-                llvm::Type* hugeTy = builder.getInt128Ty();
-                if (rawVal->getType()->isFloatingPointTy()) {
-                    rawVal = builder.CreateFPToSI(rawVal, hugeTy, "casthuge");
-                } else if (rawVal->getType()->isIntegerTy(32)) {
-                    rawVal = builder.CreateSExt(rawVal, hugeTy, "casthuge");
                 }
             } else if (typeName == "double" && !rawVal->getType()->isDoubleTy()) {
                 if (rawVal->getType()->isFloatingPointTy()) {
@@ -441,13 +433,6 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
                 rawVal = builder.CreateFPToSI(rawVal, longTy, "castlong");
             } else if (rawVal->getType()->isIntegerTy(32)) {
                 rawVal = builder.CreateSExt(rawVal, longTy, "castlong");
-            }
-        } else if (typeName == "huge") {
-            llvm::Type* hugeTy = builder.getInt128Ty();
-            if (rawVal->getType()->isFloatingPointTy()) {
-                rawVal = builder.CreateFPToSI(rawVal, hugeTy, "casthuge");
-            } else if (rawVal->getType()->isIntegerTy(32)) {
-                rawVal = builder.CreateSExt(rawVal, hugeTy, "casthuge");
             }
         }
         builder.CreateStore(rawVal, allocaInst);
@@ -521,13 +506,6 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
                 val = builder.CreateFPToSI(val, longTy, "castlong");
             } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(64)) {
                 val = builder.CreateSExt(val, longTy, "castlong");
-            }
-        } else if (var->nodeType == NodeType::NUMBER_HUGE) {
-            llvm::Type* hugeTy = builder.getInt128Ty();
-            if (val->getType()->isFloatingPointTy()) {
-                val = builder.CreateFPToSI(val, hugeTy, "casthuge");
-            } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(128)) {
-                val = builder.CreateSExt(val, hugeTy, "casthuge");
             }
         } else if (var->nodeType == NodeType::NUMBER_DOUBLE) {
             if (!val->getType()->isDoubleTy()) {
@@ -606,13 +584,6 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
             val = builder.CreateFPToSI(val, longTy, "castlong");
         } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(64)) {
             val = builder.CreateSExt(val, longTy, "castlong");
-        }
-    } else if (var->nodeType == NodeType::NUMBER_HUGE) {
-        llvm::Type* hugeTy = builder.getInt128Ty();
-        if (val->getType()->isFloatingPointTy()) {
-            val = builder.CreateFPToSI(val, hugeTy, "casthuge");
-        } else if (val->getType()->isIntegerTy() && !val->getType()->isIntegerTy(128)) {
-            val = builder.CreateSExt(val, hugeTy, "casthuge");
         }
     } else if (var->nodeType == NodeType::NUMBER_DOUBLE) {
         if (!val->getType()->isDoubleTy()) {
@@ -853,16 +824,22 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
             return builder.getInt8(std::stoi(node->value));
         case NodeType::NUMBER_SMALL:
             return builder.getInt16(std::stoi(node->value));
-        case NodeType::NUMBER:
-            return builder.getInt32(std::stoi(node->value));
+        case NodeType::NUMBER: {
+            try {
+                int32_t val32 = std::stoi(node->value);
+                return builder.getInt32(val32);
+            } catch (const std::out_of_range&) {
+                try {
+                    int64_t val64 = std::stoll(node->value);
+                    return builder.getInt64(val64);
+                } catch (const std::out_of_range&) {
+                    expect("Compile Error: number too large, use 'long' type");
+                    return builder.getInt32(0);
+                }
+            }
+        }
         case NodeType::NUMBER_LONG:
             return builder.getInt64(std::stoll(node->value));
-        case NodeType::NUMBER_HUGE: {
-            // Parse 128-bit integer manually
-            std::string val = node->value;
-            llvm::APInt intVal(128, val, 10);
-            return llvm::ConstantInt::get(context, intVal);
-        }
         case NodeType::NUMBER_DOUBLE:
             return llvm::ConstantFP::get(context, llvm::APFloat(std::stod(node->value)));
         case NodeType::NUMBER_FLOAT:
@@ -926,6 +903,7 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
                     llvm::Value *thenVal = leftVal;
                     if (!thenVal->getType()->isStructTy()) {
                         auto currentIP = builder.saveIP();
+
                         builder.SetInsertPoint(thenBB->getTerminator());
                         llvm::Value *boxed = llvm::UndefValue::get(rightVal->getType());
                         boxed = builder.CreateInsertValue(boxed, builder.getInt1(true), 0);

@@ -4,14 +4,13 @@
 #include <sstream>
 
 // Priority order (lowest to highest):
-// byte(0) < small(1) < int(2) < long(3) < huge(4) < float(5) < double(6)
+// byte(0) < small(1) < int(2) < long(3) < float(5) < double(6)
 int SemanticAnalyzer::getTypePriority(NodeType t) {
     switch (t) {
         case NodeType::NUMBER_BYTE:   return 0;
         case NodeType::NUMBER_SMALL:  return 1;
         case NodeType::NUMBER:        return 2;
         case NodeType::NUMBER_LONG:   return 3;
-        case NodeType::NUMBER_HUGE:   return 4;
         case NodeType::NUMBER_FLOAT:  return 5;
         case NodeType::NUMBER_DOUBLE: return 6;
         default:                      return -1;
@@ -47,7 +46,6 @@ std::string SemanticAnalyzer::nodeTypeToString(NodeType t) {
         case NodeType::NUMBER_BYTE: return "'byte'";
         case NodeType::NUMBER_SMALL: return "'small'";
         case NodeType::NUMBER_LONG: return "'long'";
-        case NodeType::NUMBER_HUGE: return "'huge'";
         case NodeType::NUMBER_DOUBLE: return "'double'";
         case NodeType::STRING: return "'string'";
         case NodeType::NUMBER_FLOAT : return "'float'";
@@ -137,14 +135,25 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
     else if (varType == "small") typeNode->type = NodeType::NUMBER_SMALL;
     else if (varType == "int") typeNode->type = NodeType::NUMBER;
     else if (varType == "long") typeNode->type = NodeType::NUMBER_LONG;
-    else if (varType == "huge") typeNode->type = NodeType::NUMBER_HUGE;
     else if (varType == "float") typeNode->type = NodeType::NUMBER_FLOAT;
     else if (varType == "double") typeNode->type = NodeType::NUMBER_DOUBLE;
 
 
 
-    if (!isCompatible(varType, typeNode->type)) {
-        expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " + varTypeFormatted, valNode->line, valNode->column);
+    if (!isCompatible(varType, valueType)) {
+        bool isLiteral = (valNode->type == NodeType::NUMBER || valNode->type == NodeType::NUMBER_BYTE ||
+                          valNode->type == NodeType::NUMBER_SMALL || valNode->type == NodeType::NUMBER_LONG ||
+                          valNode->type == NodeType::NUMBER_FLOAT ||
+                          valNode->type == NodeType::NUMBER_DOUBLE);
+
+        if (isLiteral && literalFitsInType(valNode->value, varType)) {
+        } else if (isNarrowingConversion(varType, valueType)) {
+            warn("Possible loss of precision: implicit narrowing from " + nodeTypeToString(valueType) + " to " + varTypeFormatted + " for variable '" +
+    varName + "'", valNode->line, valNode->column);
+        } else {
+            expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " +
+    varTypeFormatted, valNode->line, valNode->column);
+        }
     }
 
     SymbolInfo info;
@@ -260,10 +269,6 @@ bool SemanticAnalyzer::isCompatible(const std::string& declaredType, NodeType va
         return true;
     }
 
-    if (declaredType == "huge" && (valueType == NodeType::NUMBER_HUGE || valueType == NodeType::NULO)) {
-        return true;
-    }
-
     if (declaredType == "float" && (valueType == NodeType::NUMBER_FLOAT || valueType == NodeType::NULO)) {
         return true;
     }
@@ -291,6 +296,60 @@ void SemanticAnalyzer::expect(std::string msg, int line, int column) {
     }
     stream << std::endl;
     throw ParseError(stream.str());
+}
+
+void SemanticAnalyzer::warn(std::string msg, int line, int column) {
+    std::stringstream stream;
+    stream << "Warning: " << msg;
+    if (line > 0) {
+        stream << " at " << line << ":" << column;
+    }
+    stream << std::endl;
+    std::cerr << stream.str();
+}
+
+bool SemanticAnalyzer::isNarrowingConversion(const std::string& declaredType, NodeType valueType) {
+    NodeType declaredNodeType;
+    if (declaredType == "byte") declaredNodeType = NodeType::NUMBER_BYTE;
+    else if (declaredType == "small") declaredNodeType = NodeType::NUMBER_SMALL;
+    else if (declaredType == "int") declaredNodeType = NodeType::NUMBER;
+    else if (declaredType == "long") declaredNodeType = NodeType::NUMBER_LONG;
+    else if (declaredType == "float") declaredNodeType = NodeType::NUMBER_FLOAT;
+    else if (declaredType == "double") declaredNodeType = NodeType::NUMBER_DOUBLE;
+    else return false;
+    int declaredPri = getTypePriority(declaredNodeType);
+    int valuePri = getTypePriority(valueType);
+
+    return (declaredPri >= 0 && valuePri >= 0 && valuePri > declaredPri);
+}
+
+bool SemanticAnalyzer::literalFitsInType(const std::string& literalValue, const std::string& targetType) {
+    if (targetType == "byte") {
+        try {
+            long long val = std::stoll(literalValue);
+            return val >= 0 && val <= 255;
+        } catch (...) {
+            return false;
+        }
+    }
+    if (targetType == "small") {
+        try {
+            long long val = std::stoll(literalValue);
+            return val >= -32768 && val <= 32767;
+        } catch (...) {
+            return false;
+        }
+    }
+    if (targetType == "int") {
+        try {
+            long long val = std::stoll(literalValue);
+            return val >= -2147483648LL && val <= 2147483647LL;
+        } catch (...) {
+            return false;
+        }
+    }
+    // long, float, double — always accept
+    return true;
 }
 
 void SemanticAnalyzer::declareSymbol(const ASTNode *node, bool isConst, bool stickyUsed, bool isSticky) {
@@ -336,7 +395,19 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     }
 
     if (!isCompatible(info->type, valueType)) {
-        expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + info->type + "'", valNode->line, valNode->column);
+        bool isLiteral = (valNode->type == NodeType::NUMBER || valNode->type == NodeType::NUMBER_BYTE ||
+                          valNode->type == NodeType::NUMBER_SMALL || valNode->type == NodeType::NUMBER_LONG ||
+                          valNode->type == NodeType::NUMBER_FLOAT ||
+                          valNode->type == NodeType::NUMBER_DOUBLE);
+
+        if (isLiteral && literalFitsInType(valNode->value, info->type)) {
+        } else if (isNarrowingConversion(info->type, valueType)) {
+            warn("Possible loss of precision: implicit narrowing from " + nodeTypeToString(valueType) + " to '" + info->type + "' for variable '" +
+            varName + "'", valNode->line, valNode->column);
+        }  else {
+            expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type '" + info->type
+    + "'", valNode->line, valNode->column);
+        }
     }
 
 
