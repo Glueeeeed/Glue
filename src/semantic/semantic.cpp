@@ -327,7 +327,7 @@ bool SemanticAnalyzer::literalFitsInType(const std::string& literalValue, const 
     if (targetType == "byte") {
         try {
             long long val = std::stoll(literalValue);
-            return val >= 0 && val <= 255;
+            return val >= -128 && val <= 127;
         } catch (...) {
             return false;
         }

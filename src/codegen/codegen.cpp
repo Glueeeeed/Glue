@@ -718,6 +718,9 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                     innerFmt = "%lld\n";
                 } else if (innerVal->getType()->isIntegerTy()) {
                     innerFmt = "%d\n";
+                    if (innerVal->getType()->isIntegerTy(8) || innerVal->getType()->isIntegerTy(16)) {
+                        printVal = builder.CreateSExt(innerVal, builder.getInt32Ty(), "shout_ext");
+                    }
                 } else if (innerVal->getType()->isPointerTy()) {
                     innerFmt = "%s\n";
                 }
@@ -767,7 +770,11 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                 args.push_back(val);
             } else if (type->isIntegerTy()) {
                 format += "%d";
-                args.push_back(val);
+                if (type->isIntegerTy(8) || type->isIntegerTy(16)) {
+                    args.push_back(builder.CreateSExt(val, builder.getInt32Ty(), "shout_ext"));
+                } else {
+                    args.push_back(val);
+                }
             } else if (type->isDoubleTy()) {
                 format += "%g";
                 args.push_back(val);
