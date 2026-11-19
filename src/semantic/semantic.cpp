@@ -452,10 +452,40 @@ void SemanticAnalyzer::visitFunctionCall(const ASTNode* node) {
         const std::string& expectedType = info->args[i];
         bool expectedNullable = (i < info->argsNullable.size()) ? info->argsNullable[i] : false;
 
-        if (!isCompatible(expectedType, inferredType)) {
-            expect("Compile Error: argument " + std::to_string(i + 1) + " of function '" + funcName +
-                   "' is of type " + nodeTypeToString(inferredType) + ", but expected type is '" + expectedType + "'",
-                   argNode->line, argNode->column);
+
+        bool expectedIsInt = (expectedType == "byte" || expectedType == "small" || expectedType == "int" || expectedType == "long");
+        bool inferredIsInt = (inferredType == NodeType::NUMBER_BYTE || inferredType == NodeType::NUMBER_SMALL ||
+                              inferredType == NodeType::NUMBER || inferredType == NodeType::NUMBER_LONG);
+
+        if (!expectedIsInt || !inferredIsInt) {
+            if (!isCompatible(expectedType, inferredType)) {
+                expect("Compile Error: argument " + std::to_string(i + 1) + " of function '" + funcName +
+                       "' is of type " + nodeTypeToString(inferredType) + ", but expected type is '" + expectedType + "'",
+                       argNode->line, argNode->column);
+            }
+        } else if (expectedIsInt && inferredIsInt) {
+            bool isLiteral = (argNode->type == NodeType::NUMBER || argNode->type == NodeType::NUMBER_BYTE ||
+                              argNode->type == NodeType::NUMBER_SMALL || argNode->type == NodeType::NUMBER_LONG);
+            if (isLiteral) {
+                if (!literalFitsInType(argNode->value, expectedType)) {
+                    expect("Compile Error: literal value '" + argNode->value +
+                           "' does not fit in type '" + expectedType + "'",
+                           argNode->line, argNode->column);
+                }
+            } else {
+                NodeType expectedNodeType;
+                if (expectedType == "byte") expectedNodeType = NodeType::NUMBER_BYTE;
+                else if (expectedType == "small") expectedNodeType = NodeType::NUMBER_SMALL;
+                else if (expectedType == "int") expectedNodeType = NodeType::NUMBER;
+                else expectedNodeType = NodeType::NUMBER_LONG;
+
+                if (getTypePriority(inferredType) > getTypePriority(expectedNodeType)) {
+                    expect("Compile Error: argument " + std::to_string(i + 1) + " of function '" + funcName +
+                           "' is of type " + nodeTypeToString(inferredType) + ", but expected type is '" + expectedType +
+                           "' (narrowing conversion not allowed for non-literals)",
+                           argNode->line, argNode->column);
+                }
+            }
         }
 
         if (!expectedNullable && argIsNullable) {

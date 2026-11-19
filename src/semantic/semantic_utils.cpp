@@ -152,8 +152,33 @@ void SemanticAnalyzer::visitReturn(const ASTNode* node) {
             NodeType retType = inferType(exprNode);
             bool retIsNullable = isExprNullable(exprNode);
 
-            if (!isCompatible(currentFunctionReturnType, retType)) {
-                expect("Compile Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType), node->line, node->column);
+            bool expectedIsInt = (currentFunctionReturnType == "byte" || currentFunctionReturnType == "small" ||
+                                  currentFunctionReturnType == "int" || currentFunctionReturnType == "long");
+            bool inferredIsInt = (retType == NodeType::NUMBER_BYTE || retType == NodeType::NUMBER_SMALL ||
+                                  retType == NodeType::NUMBER || retType == NodeType::NUMBER_LONG);
+
+            if (!expectedIsInt || !inferredIsInt) {
+                if (!isCompatible(currentFunctionReturnType, retType)) {
+                    expect("Compile Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType), node->line, node->column);
+                }
+            } else if (expectedIsInt && inferredIsInt) {
+                bool isLiteral = (exprNode->type == NodeType::NUMBER || exprNode->type == NodeType::NUMBER_BYTE ||
+                                  exprNode->type == NodeType::NUMBER_SMALL || exprNode->type == NodeType::NUMBER_LONG);
+                if (isLiteral) {
+                    if (!literalFitsInType(exprNode->value, currentFunctionReturnType)) {
+                        expect("Compile Error: literal value '" + exprNode->value + "' does not fit in return type '" + currentFunctionReturnType + "'", exprNode->line, exprNode->column);
+                    }
+                } else {
+                    NodeType expectedNodeType;
+                    if (currentFunctionReturnType == "byte") expectedNodeType = NodeType::NUMBER_BYTE;
+                    else if (currentFunctionReturnType == "small") expectedNodeType = NodeType::NUMBER_SMALL;
+                    else if (currentFunctionReturnType == "int") expectedNodeType = NodeType::NUMBER;
+                    else expectedNodeType = NodeType::NUMBER_LONG;
+
+                    if (getTypePriority(retType) > getTypePriority(expectedNodeType)) {
+                        expect("Compile Error: Function '" + currentFunctionName + "' with return type '" + currentFunctionReturnType + "' cannot return value of type " + nodeTypeToString(retType) + " (narrowing conversion not allowed for non-literals)", node->line, node->column);
+                    }
+                }
             }
 
             if (!currentFunctionIsNullable && retIsNullable) {

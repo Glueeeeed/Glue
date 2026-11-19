@@ -204,6 +204,17 @@ void CodeGenerator::generate(const ASTNode *node) {
                 } else {
                     llvm::Value *retVal = visitExpression(retExpr);
 
+                    // Cast integer types to match expected return type
+                    if (expectedRetTy->isIntegerTy() && retVal->getType()->isIntegerTy()) {
+                        if (expectedRetTy->getIntegerBitWidth() != retVal->getType()->getIntegerBitWidth()) {
+                            if (expectedRetTy->getIntegerBitWidth() > retVal->getType()->getIntegerBitWidth()) {
+                                retVal = builder.CreateSExt(retVal, expectedRetTy, "ret_cast");
+                            } else {
+                                retVal = builder.CreateTrunc(retVal, expectedRetTy, "ret_cast");
+                            }
+                        }
+                    }
+
                     if (expectedRetTy->isStructTy() && !retVal->getType()->isStructTy()) {
                         llvm::Value *structVal = llvm::UndefValue::get(expectedRetTy);
                         structVal = builder.CreateInsertValue(structVal, builder.getInt1(true), 0);
@@ -703,6 +714,8 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                 } else if (innerVal->getType()->isIntegerTy(1)) {
                     innerFmt = "%d\n";
                     printVal = builder.CreateZExt(innerVal, builder.getInt32Ty(), "bool_promoted");
+                } else if (innerVal->getType()->isIntegerTy(64)) {
+                    innerFmt = "%lld\n";
                 } else if (innerVal->getType()->isIntegerTy()) {
                     innerFmt = "%d\n";
                 } else if (innerVal->getType()->isPointerTy()) {
@@ -749,6 +762,9 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
             if (type->isIntegerTy(1)) {
                 format += "%d";
                 args.push_back(builder.CreateZExt(val, builder.getInt32Ty()));
+            } else if (type->isIntegerTy(64)) {
+                format += "%lld";
+                args.push_back(val);
             } else if (type->isIntegerTy()) {
                 format += "%d";
                 args.push_back(val);
