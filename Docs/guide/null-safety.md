@@ -5,7 +5,6 @@ style errors and undefined behavior at runtime.
 
 The system draws inspiration from languages such as Kotlin, Swift, TypeScript, and C#.
 
----
 
 ## The `nulo` Literal
 
@@ -16,7 +15,6 @@ int? x = nulo;
 string? name = nulo;
 ```
 
----
 
 ## Nullable Types
 
@@ -50,7 +48,6 @@ int y = 10;    // OK: initialized
 // int z;      // Compile Error: non-nullable variable must be initialized
 ```
 
----
 
 ## Core Safety Rules
 
@@ -79,7 +76,6 @@ int result = x + y;  // Compile Error: cannot perform arithmetic on nullable typ
 
 To perform arithmetic, first narrow the type (see **Type Narrowing** below).
 
----
 
 ## Type Narrowing
 
@@ -133,7 +129,6 @@ if (!x) {
 }
 ```
 
----
 
 ## Edge Cases
 

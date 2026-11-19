@@ -1,8 +1,7 @@
 # Code Samples
 
-This section contains working code examples illustrating various features and idioms in the GlueIR programming language.
+This section contains working code examples illustrating various features and idioms in the Glue programming language.
 
----
 
 ## 1. Complete Application (`hello.glue`)
 
@@ -46,7 +45,6 @@ func int main() {
 }
 ```
 
----
 
 ## 2. Sticky Variable Mutability (`sticky.glue`)
 
@@ -68,22 +66,48 @@ func int main() {
 }
 ```
 
----
 
 ## 3. Mathematical Operations & Comparisons (`expressions.glue`)
 
-Demonstrates operator precedence, boolean comparisons, and type promotion.
+Demonstrates operator precedence, boolean comparisons, and automatic type promotion across integer, float, and double types.
 
 ```c
+/*g
+  Expressions and type promotion in Glue
+
+  This example demonstrates arithmetic expressions and automatic type promotion.
+  Glue promotes operands to the wider (higher-priority) type so no data is lost.
+  Priority order: byte < small < int < long < huge < float < double
+g*/
+
 func int main() {
+
+    // --- Integer + Double promotion ---
+    // int and double operands: the int is promoted to double
     int a = 10;
     int b = 20;
     double factor = 2.5;
 
-    // Automatic type promotion (int + double -> double)
+    // Automatic type promotion: int + int * double -> double
+    // Evaluation order: b * factor = 50.0, then a + 50.0 = 60.0
     double result = a + b * factor;
     shout("Calculated result: ", result);
 
+    // --- Byte + Int promotion ---
+    // byte is promoted to int before addition
+    byte smallVal = 5;
+    int bigVal = 100;
+    int sum = smallVal + bigVal;
+    shout("byte + int = ", sum);
+
+    // --- Float + Double promotion ---
+    // float is extended to double
+    float f = 1.5f;
+    double d = 2.0;
+    double fdSum = f + d;
+    shout("float + double = ", fdSum);
+
+    // Comparison returns a bool
     bool isHigher = result > 50.0;
     if (isHigher == true) {
         shout("Result exceeds threshold.");
@@ -95,7 +119,6 @@ func int main() {
 }
 ```
 
----
 
 ## 4. Benchmark Loop (`bench.glue`)
 

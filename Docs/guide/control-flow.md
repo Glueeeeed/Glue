@@ -2,7 +2,6 @@
 
 Glue provides standard control flow constructs: branching with `if` / `else` statements and iteration with `while` loops.
 
----
 
 ## The `if` / `else` Statement
 
@@ -22,7 +21,6 @@ func int main() {
 }
 ```
 
----
 
 ## The `while` Loop
 
@@ -41,7 +39,6 @@ func int main() {
 }
 ```
 
----
 
 ## Operators & Precedence
 
@@ -62,8 +59,8 @@ Evaluation follows standard algebraic and boolean rules:
 6. Logical OR: `or`, `||`
 
 ::: tip Automatic Type Promotion
-Glue automatically promotes mixed numerical operations:
-- When an integer (`int`) interacts with a floating-point value (`float`/`double`), the integer is cast to float (`sitofp`).
-- Operations between `float` and `double` promote the result to `double`.
+Glue automatically promotes mixed numerical operations so that the result always uses the wider (higher-priority) type.
+
+For the complete type promotion table and additional examples, see [Syntax, Types & Mutability Type Promotion](/guide/syntax-and-types#type-promotion).
 :::
 

@@ -2,11 +2,10 @@
 
 Functions, built-in helpers, and input/output form the core of program logic and interaction in Glue.
 
----
 
 ## Function Declarations & Parameters
 
-Functions are declared using the `func` keyword. GlueIR supports parameter declarations, explicit return types, and default `void` return types:
+Functions are declared using the `func` keyword. Glue supports parameter declarations, explicit return types, and default `void` return types:
 
 ```c
 func int add(int a, int b) {
@@ -32,14 +31,6 @@ func int main() {
     return 0;
 }
 ```
-
-::: info Main Function Mechanics
-At code generation time, the compiler automatically handles the `main` entry point:
-- Initializes random seed (`srand`) based on current system time.
-- Injects a completion message `Program completed successfully. Press Enter to exit.`.
-- Injects a `getchar()` call to prevent immediate terminal termination on execution.
-:::
-
 
 Glue provides built-in functions for console input/output, random number generation, and type conversions:
 

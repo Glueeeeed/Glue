@@ -2,7 +2,6 @@
 
 Glue is a statically and strongly typed language with an emphasis on explicit variable mutability and clear syntax.
 
----
 
 ## Comments
 
@@ -15,12 +14,11 @@ Glue supports both single-line comments and distinctive block comments:
 // This is a standard single-line comment
 
 /*g
-  This is a GlueIR block comment.
+  This is a Glue block comment.
   It can span multiple lines.
 g*/
 ```
 
----
 
 ## Data Types
 
@@ -42,7 +40,6 @@ Glue provides fundamental primitive types mapped directly to native LLVM represe
 Floating-point numbers with a trailing `f` (e.g. `10.5f`) are parsed as `float`. Floating-point numbers without suffix (e.g. `10.5`) default to `double`.
 :::
 
----
 
 ## Variable Declarations & Mutability Modifiers
 
@@ -75,7 +72,6 @@ appStatus = "ready"; // OK: first reassignment allowed
 // appStatus = "stopped"; // Compile Error: variable 'appStatus' is 'sticky' and has already been reassigned once
 ```
 
----
 
 ::: warning Sticky Limitations
 
@@ -85,7 +81,51 @@ Sticky variables are not allowed in `while` statement. Declaration and asignment
 
 :::
 
-##  Declaration Limitations
+
+## Type Promotion
+
+Glue automatically promotes operand types during binary arithmetic and comparison operations. When two operands of different numeric types participate in an operation, the result type is the wider (higher-priority) type. This prevents data loss and matches the behavior of languages like C and Java.
+
+### Type Priority Table
+
+Types are ordered from lowest to highest priority. During an operation, the type with the higher priority becomes the result type:
+
+| Priority | Type  | LLVM Type | Bits  |
+| -------- | ----- | --------- | ----- |
+| 0        | `byte`   | `i8`   | 8     |
+| 1        | `small`  | `i16`  | 16    |
+| 2        | `int`    | `i32`  | 32    |
+| 3        | `long`   | `i64`  | 64    |
+| 4        | `huge`   | `i128` | 128   |
+| 5        | `float`  | `float`| 32    |
+| 6        | `double` | `double`| 64   |
+
+### Promotion Rules
+
+- **Integer + Integer**: The narrower integer is sign-extended to the wider integer type.
+  ```c
+  byte b = 5;
+  int x = 10;
+  int sum = b + x;       // byte is promoted to int; result is int
+  ```
+
+- **Integer + Floating-Point**: The integer is converted to floating-point.
+  ```c
+  int a = 10;
+  double factor = 2.5;
+  double result = a * factor;  // int is promoted to double; result is double
+  ```
+
+- **Float + Double**: The `float` is extended to `double`.
+  ```c
+  float f = 1.5f;
+  double d = 2.0;
+  double sum = f + d;    // float is promoted to double; result is double
+  ```
+
+- **Comparison operators** (`==`, `!=`, `<`, `<=`, `>`, `>=`) always return `bool`, regardless of operand types. The operands themselves are still promoted to a common type before comparison.
+
+## Declaration Limitations
 
 ::: warning Important Limitations
 1. **Declaration with Initialization**:

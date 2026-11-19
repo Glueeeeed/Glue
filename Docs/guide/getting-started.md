@@ -1,10 +1,9 @@
 # Getting Started with Glue
 
-Welcome to **Glue** is a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
+Welcome to **Glue** a minimalist, statically typed procedural programming language that compiles directly to native binaries via LLVM.
 
-This guide walks you through installing dependencies, building the GlueIR compiler from source, and compiling your first program on **Linux**, **macOS**, and **Windows**.
+This guide walks you through installing dependencies, building the Glue compiler from source, and compiling your first program on **Linux**, **macOS**, and **Windows**.
 
----
 
 ## System Requirements
 
@@ -18,7 +17,6 @@ LLVM 22 is required for all features and optimizations in Glue.
 Versions newer than 22 may be incompatible because LLVM drastically changes its API with each new version.
 :::
 
----
 
 ## Installing Dependencies
 
@@ -55,8 +53,6 @@ yay -S --needed base-devel cmake llvm22 clang22
 
 # 2. Extract the downloaded archive and move its entire contents to `C:\Program Files\LLVM`.
 
-
-
 # Ensure Visual Studio with "Desktop development with C++" is installed.
 
 # If LLVM is not in standard paths, set LLVM_DIR environment variable:
@@ -66,7 +62,6 @@ $env:LLVM_DIR = "C:\Program Files\LLVM\lib\cmake\llvm"
 
 :::
 
----
 
 ## Building the Compiler
 
@@ -105,7 +100,6 @@ cmake --build . --config Release
 
 Upon a successful build, the `glue` (or `glue.exe` on Windows) compiler executable will be available in your build directory.
 
----
 
 ## Your First Glue Program
 

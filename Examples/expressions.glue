@@ -2,12 +2,14 @@
   Expressions and type promotion in Glue
 
   This example demonstrates arithmetic expressions and automatic type promotion.
-  When an int and double are combined, the result is automatically promoted to double.
+  Glue promotes operands to the wider (higher-priority) type so no data is lost.
+  Priority order: byte < small < int < long < huge < float < double
 g*/
 
 func int main() {
 
-    // Integer and double operands
+    // --- Integer + Double promotion ---
+    // int and double operands: the int is promoted to double
     int a = 10;
     int b = 20;
     double factor = 2.5;
@@ -16,6 +18,20 @@ func int main() {
     // Evaluation order: b * factor = 50.0, then a + 50.0 = 60.0
     double result = a + b * factor;
     shout("Calculated result: ", result);
+
+    // --- Byte + Int promotion ---
+    // byte is promoted to int before addition
+    byte smallVal = 5;
+    int bigVal = 100;
+    int sum = smallVal + bigVal;
+    shout("byte + int = ", sum);
+
+    // --- Float + Double promotion ---
+    // float is extended to double
+    float f = 1.5f;
+    double d = 2.0;
+    double fdSum = f + d;
+    shout("float + double = ", fdSum);
 
     // Comparison returns a bool
     bool isHigher = result > 50.0;
