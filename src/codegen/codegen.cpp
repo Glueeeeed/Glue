@@ -1149,7 +1149,6 @@ void CodeGenerator::compileAndRun(const std::string& outputBin, bool execute, st
 }
 
 void CodeGenerator::runJit() {
-
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
@@ -1161,7 +1160,6 @@ void CodeGenerator::runJit() {
         return;
     }
     auto &jit = *jitResult;
-
 
     auto jitContext = std::make_unique<llvm::LLVMContext>();
 
@@ -1195,6 +1193,9 @@ void CodeGenerator::runJit() {
         llvm::consumeError(std::move(err));
         return;
     }
+
+    auto mainFunc = mainAddrResult->toPtr<int ()>();
+    mainFunc();
 }
 
 
