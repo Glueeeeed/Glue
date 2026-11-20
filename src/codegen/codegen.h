@@ -4,11 +4,12 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "../AST/ast.h"
 #include <iostream>
 #include <map>
 #include <sstream>
-#include <llvm/ExecutionEngine/Orc/LLJIT.h>
+#include <string>
 
 struct namedValuesStruct {
     llvm::AllocaInst* pointer;
@@ -67,12 +68,17 @@ class CodeGenerator {
 
 public:
 
-
-
     explicit CodeGenerator(llvm::LLVMContext &ctx)
     : context(ctx), builder(context) {}
     void generateCode(const ASTNode* node);
     void generate(const ASTNode* node);
+
+    void saveIr(const std::string& filename = "gir.ll");
+
+
+    void compileAndRun(const std::string& outputBin = "glue_program", bool execute = false, std::string optimization = "-O2");
+    void runJit();
+
     void save();
     void run();
 };

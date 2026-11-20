@@ -1,12 +1,19 @@
 #include "codegen.h"
 
 #include <sstream>
+
+#include <cstdlib>
 #include "../parser/parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
 
 void CodeGenerator::generateCode(const ASTNode *node) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
@@ -142,7 +149,7 @@ void CodeGenerator::generate(const ASTNode *node) {
                 llvm::Value *retValLoaded = builder.CreateLoad(builder.getInt32Ty(), this->returnValue, "retValLoaded");
 
                 auto exitMsgFormat = builder.CreateGlobalString(
-                    "\nProgram completed with exit code %d.\nPress Enter to exit.\n",
+                    "\nProgram completed with exit code %d.\n",
                     "fmt_exit_code"
                 );
 
@@ -151,8 +158,8 @@ void CodeGenerator::generate(const ASTNode *node) {
                 auto fflushFunc = module->getOrInsertFunction("fflush", printfType);
                 builder.CreateCall(fflushFunc, {llvm::ConstantPointerNull::get(builder.getPtrTy())});
 
-                auto getcharFunc = module->getOrInsertFunction("getchar", llvm::FunctionType::get(builder.getInt32Ty(), false));
-                builder.CreateCall(getcharFunc);
+                // auto getcharFunc = module->getOrInsertFunction("getchar", llvm::FunctionType::get(builder.getInt32Ty(), false));
+                // builder.CreateCall(getcharFunc);
 
 
                 llvm::Value *retValFinal = builder.CreateLoad(builder.getInt32Ty(), this->returnValue, "retValFinal");
@@ -1104,18 +1111,100 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
 //     builder.CreateStore(value, type);
 // }
 
-void CodeGenerator::save() {
+
+
+void CodeGenerator::saveIr(const std::string& filename) {
     std::error_code EC;
-    llvm::raw_fd_ostream out("gir.ll", EC);
+    if (EC) {
+        std::cerr << "Error: failed to open '" << filename << "'\n";
+        return;
+    }
+    llvm::raw_fd_ostream out(filename, EC);
     module->print(out, nullptr);
-    run();
+}
+
+void CodeGenerator::compileAndRun(const std::string& outputBin, bool execute, std::string optimization) {
+
+    saveIr("gir.ll");
+#if defined(_WIN32) || defined(_WIN64)
+    std::string cmd = "clang -O2 gir.ll -o " + outputBin + ".exe -llegacy_stdio_definitions";
+    int result = system(cmd.c_str());
+    std::string runCmd = outputBin + ".exe";
+    std::string delCmd = "del gir.ll";
+#else
+    std::string cmd = "clang -O2 gir.ll -o " + outputBin;
+    int result = system(cmd.c_str());
+    std::string runCmd = "./" + outputBin;
+    std::string delCmd = "rm gir.ll";
+#endif
+
+    if (!execute) {
+        std::cout << "[Glue] Successfully compiled to: " << outputBin << "\n";
+    }
+    if (execute) {
+        system(runCmd.c_str());
+    }
+
+    system(delCmd.c_str());
+}
+
+void CodeGenerator::runJit() {
+
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
+    auto jitResult = llvm::orc::LLJITBuilder().create();
+    if (!jitResult) {
+        std::cerr << "[Glue] Error: failed to create JIT!\n";
+        llvm::consumeError(jitResult.takeError());
+        return;
+    }
+    auto &jit = *jitResult;
+
+
+    auto jitContext = std::make_unique<llvm::LLVMContext>();
+
+    std::string irStr;
+    {
+        llvm::raw_string_ostream ros(irStr);
+        module->print(ros, nullptr);
+    }
+
+    auto buffer = llvm::MemoryBuffer::getMemBufferCopy(irStr, "jit_module");
+    llvm::SMDiagnostic diag;
+    auto jitModule = llvm::parseIR(buffer->getMemBufferRef(), diag, *jitContext);
+    if (!jitModule) {
+        std::cerr << "[Glue] JIT Error: failed to parse IR for JIT context: " << diag.getMessage().str() << "\n";
+        return;
+    }
+    jitModule->setDataLayout(module->getDataLayoutStr());
+    jitModule->setTargetTriple(module->getTargetTriple());
+
+    llvm::orc::ThreadSafeModule tsModule(std::move(jitModule), std::move(jitContext));
+
+    if (auto err = jit->addIRModule(std::move(tsModule))) {
+        std::cerr << "[Glue] JIT Error: failed to load module!\n";
+        llvm::consumeError(std::move(err));
+        return;
+    }
+
+    auto mainAddrResult = jit->lookup("main");
+    if (auto err = mainAddrResult.takeError()) {
+        std::cerr << "[Glue] JIT Error: failed to find main function!\n";
+        llvm::consumeError(std::move(err));
+        return;
+    }
+}
+
+
+
+void CodeGenerator::save() {
+    saveIr("gir.ll");
 }
 
 void CodeGenerator::run() {
 #if defined(_WIN32) || defined(_WIN64)
-
-    // temporary solution
-
     system("clang -O2 gir.ll -o glue_program.exe -llegacy_stdio_definitions");
     system("glue_program.exe");
     system("del gir.ll");
@@ -1123,7 +1212,6 @@ void CodeGenerator::run() {
     system("clang -O2 gir.ll -o glue_program && ./glue_program");
     system("rm gir.ll");
 #endif
-    // system("clang gir.ll -o glue_bench"); // BENCHMARKS
 }
 
 void CodeGenerator::expect(std::string msg) {
