@@ -1,0 +1,45 @@
+/*g 
+
+    C	 12.176s	
+    C++	 12.307s	
+    Glue 12.625s	
+    Go	 18.023s	
+    C# (NativeAOT) 19.082s
+    Java 19.810s
+
+g*/
+
+  
+
+func long CollatzTotalStepsWhile(long limit)  {
+    long totalSteps = 0;
+    long i = 1;
+
+    while (i <= limit) {
+        long n = i;
+        long steps = 0;
+
+        while (n > 1) {
+         if (n % 2 == 0) {
+             n = n / 2;
+         } else {
+             n = 3 * n + 1;
+         }
+            steps = steps + 1;
+        }
+
+        totalSteps = totalSteps + steps;
+        i = i + 1;
+    }
+
+    return totalSteps;
+}
+
+func int main() {
+
+    const long LIMIT = 100000000;
+    long result = CollatzTotalStepsWhile(LIMIT);
+    shout(result);
+
+    return 0;
+}

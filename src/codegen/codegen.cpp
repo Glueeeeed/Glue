@@ -1127,16 +1127,21 @@ void CodeGenerator::compileAndRun(const std::string& outputBin, bool execute, st
 
     saveIr("gir.ll");
 #if defined(_WIN32) || defined(_WIN64)
-    std::string cmd = "clang -O2 gir.ll -o " + outputBin + ".exe -llegacy_stdio_definitions";
+    std::string cmd = "clang " + optimization + " gir.ll -o " + outputBin + ".exe -llegacy_stdio_definitions";
     int result = system(cmd.c_str());
     std::string runCmd = outputBin + ".exe";
     std::string delCmd = "del gir.ll";
 #else
-    std::string cmd = "clang -O2 gir.ll -o " + outputBin;
+    std::string cmd = "clang " + optimization + " gir.ll -o " + outputBin;
     int result = system(cmd.c_str());
     std::string runCmd = "./" + outputBin;
     std::string delCmd = "rm gir.ll";
 #endif
+
+    if (result != 0) {
+        std::cerr << "[Glue] Compilation failed with code " << result << "\n";
+        return;
+    }
 
     if (!execute) {
         std::cout << "[Glue] Successfully compiled to: " << outputBin << "\n";
