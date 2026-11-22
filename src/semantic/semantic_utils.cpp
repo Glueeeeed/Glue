@@ -305,6 +305,13 @@ bool SemanticAnalyzer::hasEndingReturn(const ASTNode* bodyNode) const {
     if (bodyNode->type == NodeType::BLOCK && !bodyNode->children.empty()) {
         return hasEndingReturn(bodyNode->children.back().get());
     }
+    if (bodyNode->type == NodeType::IF_STATEMENT) {
+        const ASTNode* thenNode = bodyNode->children[1].get();
+        const ASTNode* elseNode = (bodyNode->children.size() > 2) ? bodyNode->children[2].get() : nullptr;
+        if (elseNode && hasEndingReturn(thenNode) && hasEndingReturn(elseNode)) {
+            return true;
+        }
+    }
     return false;
 }
 
