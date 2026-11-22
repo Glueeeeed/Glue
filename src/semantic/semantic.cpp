@@ -502,7 +502,9 @@ void SemanticAnalyzer::visitFunctionCall(const ASTNode* node) {
 
 
 
-    if (funcName == "shout" || funcName == "shin"  || funcName == "random" || funcName == "toInt" || funcName == "toFloat" || funcName == "toDouble" ) return;
+    if (funcName == "shout" || funcName == "shin"  || funcName == "random" || funcName == "toInt" || funcName == "toFloat" || funcName == "toDouble" ) {
+        return;
+    }
 
     SymbolInfo* info = symbolTable.lookup(funcName);
     if (!info) expect("Compile Error: function '" + funcName + "' is not declared", node->line, node->column);
@@ -655,6 +657,16 @@ void SemanticAnalyzer::visitArrayDeclaration(const ASTNode* node) {
 
     std::string varName = node->value;
     std::string elementType = arrayTypeNode->value;
+    std::string arrSizeVal = arrayTypeNode->children[0]->value;
+
+    int arrSize = std::stoi(arrSizeVal);
+
+    if (arrayLiteralNode->children.size() > arrSize) {
+        expect("Compile Error: array initializer size exceeds declared size", node->line, node->column);
+    }
+
+
+    bool isNullable = node->isNullable;
 
     bool validElementType = (elementType == "byte" || elementType == "small" || elementType == "int" ||
                              elementType == "long" || elementType == "float" || elementType == "double" ||
@@ -687,12 +699,22 @@ void SemanticAnalyzer::visitArrayDeclaration(const ASTNode* node) {
     }
 
     for (const auto& elem : arrayLiteralNode->children) {
+
         NodeType elemType = inferType(elem.get());
+
+        if (!isNullable && elem->type == NodeType::NULO) {
+            expect("Compile Error: cannot assign nulo to array element of type '" + elementType + "'", elem->line, elem->column);
+        }
+
         if (!isCompatible(elementType, elemType)) {
             bool isLiteral = (elem->type == NodeType::NUMBER || elem->type == NodeType::NUMBER_BYTE ||
                               elem->type == NodeType::NUMBER_SMALL || elem->type == NodeType::NUMBER_LONG ||
-                              elem->type == NodeType::NUMBER_FLOAT || elem->type == NodeType::NUMBER_DOUBLE ||
-                              elem->type == NodeType::STRING);
+                              elem->type == NodeType::NUMBER_FLOAT || elem->type == NodeType::NUMBER_DOUBLE );
+
+            if (elem->type != NodeType::STRING && elementType == "string") {
+                expect("Compile Error: cannot assign " + nodeTypeToString(elemType) +
+                   " to array element of type '" + elementType + "'", elem->line, elem->column);
+            }
 
             if (isLiteral && literalFitsInType(elem->value, elementType)) {
             } else if (isNarrowingConversion(elementType, elemType)) {

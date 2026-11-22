@@ -25,6 +25,7 @@ void Parser::parse() {
 }
 
 std::unique_ptr<ASTNode> Parser::parseArrayInitializer() {
+    Token token = currentToken();
     auto arrayNode = std::make_unique<ASTNode>(NodeType::ARRAY_LITERAL, "", false, false, false, 
                                                currentToken().line, currentToken().column);
     
