@@ -689,6 +689,9 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
         std::string format;
         std::vector<llvm::Value *> args;
 
+        llvm::Value *fmtNuloShared = builder.CreateGlobalString("nulo");
+        llvm::Value *fmtStrShared = builder.CreateGlobalString("%s");
+
         for (size_t i = 0; i < node->children.size(); ++i) {
             const ASTNode *arg = node->children[i].get();
             if (!arg) continue;
@@ -737,12 +740,11 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                 builder.CreateBr(mergeBB);
 
                 builder.SetInsertPoint(nuloBB);
-                llvm::Value *fmtNulo = builder.CreateGlobalString("nulo\n");
-                builder.CreateCall(printfFunc, {fmtNulo});
+                builder.CreateCall(printfFunc, {fmtNuloShared});
                 builder.CreateBr(mergeBB);
 
                 builder.SetInsertPoint(mergeBB);
-                return nullptr;
+                continue;
             }
 
             if (type->isPointerTy()) {
@@ -756,17 +758,15 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                 builder.CreateCondBr(isNull, nuloBB, strBB);
 
                 builder.SetInsertPoint(strBB);
-                llvm::Value *fmtStr = builder.CreateGlobalString("%s\n");
-                builder.CreateCall(printfFunc, {fmtStr, val});
+                builder.CreateCall(printfFunc, {fmtStrShared, val});
                 builder.CreateBr(mergeBB);
 
                 builder.SetInsertPoint(nuloBB);
-                llvm::Value *fmtNulo = builder.CreateGlobalString("nulo\n");
-                builder.CreateCall(printfFunc, {fmtNulo});
+                builder.CreateCall(printfFunc, {fmtNuloShared});
                 builder.CreateBr(mergeBB);
 
                 builder.SetInsertPoint(mergeBB);
-                return nullptr;
+                continue;
             }
 
             if (type->isIntegerTy(1)) {
