@@ -29,6 +29,10 @@ enum class NodeType {
     NUMBER_DOUBLE,
     NUMBER_FLOAT,
     NULO,
+    ARRAY_TYPE,
+    ARRAY_DECLARATION,
+    ARRAY_LITERAL,
+    ARRAY_ACCESS,
     BOND,
     BOOLEAN,
     TYPE,
@@ -67,6 +71,10 @@ class AST {
     std::unique_ptr<ASTNode> makeFloat(const std::string& value1, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeBool(const std::string& name, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeNulo(const std::string& name, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode> makeArrayType(const std::string& elementType, std::unique_ptr<ASTNode> size);
+    std::unique_ptr<ASTNode> makeArrayLiteral(std::vector<std::unique_ptr<ASTNode>> elements);
+    std::unique_ptr<ASTNode> makeArrayAccess(std::unique_ptr<ASTNode> array, std::unique_ptr<ASTNode> index);
+
 
 
     std::unique_ptr<ASTNode> makeParameter(const std::string& name, const std::string& type);
@@ -79,6 +87,7 @@ class AST {
     void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false, bool isNullable = false, int line = 0, int column = 0);
     void addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> params, std::unique_ptr<ASTNode> body);
     void addFunctionArgument(std::unique_ptr<ASTNode> arg);
+    void addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line = 0, int column = 0);
 
 
     void addFunctionCall(std::string &name, std::vector<std::unique_ptr<ASTNode>> args);

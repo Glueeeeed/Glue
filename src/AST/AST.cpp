@@ -53,6 +53,26 @@ std::unique_ptr<ASTNode> AST::makeBinaryOp(const std::string& op, std::unique_pt
     return node;
 }
 
+std::unique_ptr<ASTNode> AST::makeArrayType(const std::string& elementType, std::unique_ptr<ASTNode> size) {
+    auto call = std::make_unique<ASTNode>(NodeType::ARRAY_TYPE, elementType);
+    call->children.push_back(std::move(size));
+    return call;
+}
+std::unique_ptr<ASTNode> AST::makeArrayLiteral(std::vector<std::unique_ptr<ASTNode>> elements) {
+    auto call = std::make_unique<ASTNode>(NodeType::ARRAY_LITERAL);
+    for (auto& element : elements)
+        call->children.push_back(std::move(element));
+    return call;
+}
+std::unique_ptr<ASTNode> AST::makeArrayAccess(std::unique_ptr<ASTNode> array, std::unique_ptr<ASTNode> index) {
+    auto call = std::make_unique<ASTNode>(NodeType::ARRAY_ACCESS);
+    call->children.push_back(std::move(array));
+    call->children.push_back(std::move(index));
+    return call;
+}
+
+
+
 std::unique_ptr<ASTNode> AST::makeType(const std::string &name, int line, int column) {
     return std::make_unique<ASTNode>(NodeType::TYPE, name, false, false, false, false,line, column);
 }
@@ -71,6 +91,13 @@ std::unique_ptr<ASTNode> AST::makeParameter(const std::string& name, const std::
 
 void AST::addChild(std::unique_ptr<ASTNode> child) {
     root->children.push_back(std::move(child));
+}
+
+void AST::addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line, int column) {
+    auto arrayDecl = std::make_unique<ASTNode>(NodeType::ARRAY_DECLARATION, name, false, false, false, false, line, column);
+    arrayDecl->children.push_back(std::move(arrayType));
+    arrayDecl->children.push_back(std::move(literals));
+    addChild(std::move(arrayDecl));
 }
 
 void AST::addAssignment(const std::string& var, std::unique_ptr<ASTNode> expr, int line, int column) {
