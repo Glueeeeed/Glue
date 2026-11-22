@@ -717,17 +717,17 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                 llvm::Value *printVal = innerVal;
 
                 if (innerVal->getType()->isFloatTy()) {
-                    innerFmt = "%g\n";
+                    innerFmt = "%.7g";
                     printVal = builder.CreateFPExt(innerVal, builder.getDoubleTy(), "float_promoted");
                 } else if (innerVal->getType()->isDoubleTy()) {
-                    innerFmt = "%g\n";
+                    innerFmt = "%.17g";
                 } else if (innerVal->getType()->isIntegerTy(1)) {
-                    innerFmt = "%d\n";
+                    innerFmt = "%d";
                     printVal = builder.CreateZExt(innerVal, builder.getInt32Ty(), "bool_promoted");
                 } else if (innerVal->getType()->isIntegerTy(64)) {
-                    innerFmt = "%lld\n";
+                    innerFmt = "%lld";
                 } else if (innerVal->getType()->isIntegerTy()) {
-                    innerFmt = "%d\n";
+                    innerFmt = "%d";
                     if (innerVal->getType()->isIntegerTy(8) || innerVal->getType()->isIntegerTy(16)) {
                         printVal = builder.CreateSExt(innerVal, builder.getInt32Ty(), "shout_ext");
                     }
@@ -783,10 +783,10 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
                     args.push_back(val);
                 }
             } else if (type->isDoubleTy()) {
-                format += "%g";
+                format += "%.17g";
                 args.push_back(val);
             } else if (type->isFloatTy()) {
-                format += "%g";
+                format += "%.7g";
                 args.push_back(builder.CreateFPExt(val, builder.getDoubleTy()));
             } else if (type->isPointerTy()) {
                 format += "%s";
