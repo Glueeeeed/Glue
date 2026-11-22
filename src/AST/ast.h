@@ -87,7 +87,7 @@ class AST {
     void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false, bool isNullable = false, int line = 0, int column = 0);
     void addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> params, std::unique_ptr<ASTNode> body);
     void addFunctionArgument(std::unique_ptr<ASTNode> arg);
-    void addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line = 0, int column = 0);
+    std::unique_ptr<ASTNode>  addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line = 0, int column = 0);
 
 
     void addFunctionCall(std::string &name, std::vector<std::unique_ptr<ASTNode>> args);

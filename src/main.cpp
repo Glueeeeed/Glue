@@ -17,6 +17,7 @@ struct CompileOptions {
     std::string inputFile;
     bool run = false;
     bool jit = false;
+    bool printAST = false;
     enum { O0 , O1 , O2, O3, Os, Oz } optLevel = O2;
     std::string optimization = "-O2";
     std::string outputBin = "glue_program";
@@ -92,6 +93,9 @@ CompileOptions parseArgs(int argc, char* argv[]) {
         else if (arg == "--jit") {
             opts.jit = true;
         }
+        else if (arg == "--ast") {
+            opts.printAST = true;
+        }
         else if (arg == "--output") {
             if (i + 1 >= argc) {
                 std::cerr << "Błąd: option '" << arg << "' requires name file\n";
@@ -135,6 +139,13 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception &e) {
         std::cerr << e.what() << '\n';
         return 2;
+    }
+
+    if (opts.printAST) {
+        std::cout << "=== AST ===" << std::endl;
+        parser.printAST();
+        std::cout << "=== End AST ===" << std::endl;
+        return 0;
     }
 
     try {

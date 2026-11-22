@@ -24,6 +24,46 @@ void Parser::parse() {
     }
 }
 
+std::unique_ptr<ASTNode> Parser::parseArrayInitializer() {
+    auto arrayNode = std::make_unique<ASTNode>(NodeType::ARRAY_LITERAL, "", false, false, false, 
+                                               currentToken().line, currentToken().column);
+    
+    while (currentToken().type != TokenType::RBRACE && currentToken().type != TokenType::END_OF_FILE) {
+        arrayNode->children.push_back(parseExpression());
+        
+        if (currentToken().type == TokenType::COMMA) {
+            nextToken();
+        } else if (currentToken().type != TokenType::RBRACE) {
+            expect("Syntax Error: expected ',' or '}' in array initializer", currentToken().line, currentToken().column);
+        }
+    }
+    
+    return arrayNode;
+}
+
+std::unique_ptr<ASTNode> Parser::parseArrayDeclaration(const std::string& type) {
+    consume(TokenType::LBRACKET, "Syntax Error: expected '[' after type name in array declaration");
+
+    std::unique_ptr<ASTNode> arraySize = parseExpression();
+
+    consume(TokenType::RBRACKET, "Syntax Error: expected ']' after array size in declaration");
+
+    Token idToken = currentToken();
+    std::string identifier = idToken.value;
+    consume(TokenType::IDENTIFIER, "Syntax Error: expected an identifier after type '" + type + "'");
+
+    consume(TokenType::EQUALS, "Syntax Error: expected '=' to initialize array");
+
+    consume(TokenType::LBRACE, "Syntax Error: expected '{' to start array initializer");
+
+    std::unique_ptr<ASTNode> literals = parseArrayInitializer();
+
+    consume(TokenType::RBRACE, "Syntax Error: expected '}' to close array initialization");
+    
+    std::unique_ptr<ASTNode> arrayType = ast.makeArrayType(type, std::move(arraySize));
+    return ast.addArrayDeclaration(std::move(arrayType), identifier, std::move(literals), idToken.line, idToken.column);
+}
+
 
 void Parser::parseFunctionDeclaration() {
 
@@ -260,6 +300,14 @@ std::unique_ptr<ASTNode> Parser::parseDeclaration() {
 
     consume(TokenType::TYPE, "Syntax Error: expected a type name (e.g., int, string) in declaration");
 
+    if (currentToken().type == TokenType::LBRACKET) {
+        auto arrayDecl = parseArrayDeclaration(type);
+        if (arrayDecl) {
+            consume(TokenType::SEMICOLON, "Syntax Error: expected ';' after array declaration");
+            return arrayDecl;
+        }
+    }
+
     if (currentToken().type == TokenType::QUESTION) {
         isNullable = true;
         nextToken();
@@ -380,8 +428,9 @@ Token Parser::nextToken() {
 }
 
 void Parser::printASTCall() {
-    // ast.printAST(ast.getRoot()); // FOR DEBUG
+    ast.printAST(ast.getRoot()); // FOR DEBUG
     semantic.analyse(ast.getRoot());
+
     codegen.generateCode(ast.getRoot());
 }
 

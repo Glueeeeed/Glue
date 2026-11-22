@@ -14,6 +14,9 @@ struct SymbolInfo {
     bool isNullable = false;
     std::string value;
     mutable bool stickyUsed = false;
+    bool isArray = false;
+    std::string elementType;
+    int arraySize = 0;
 };
 
 class Scope {

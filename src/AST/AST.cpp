@@ -93,11 +93,11 @@ void AST::addChild(std::unique_ptr<ASTNode> child) {
     root->children.push_back(std::move(child));
 }
 
-void AST::addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line, int column) {
+std::unique_ptr<ASTNode>  AST::addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line, int column) {
     auto arrayDecl = std::make_unique<ASTNode>(NodeType::ARRAY_DECLARATION, name, false, false, false, false, line, column);
     arrayDecl->children.push_back(std::move(arrayType));
     arrayDecl->children.push_back(std::move(literals));
-    addChild(std::move(arrayDecl));
+    return arrayDecl;
 }
 
 void AST::addAssignment(const std::string& var, std::unique_ptr<ASTNode> expr, int line, int column) {
@@ -158,6 +158,9 @@ void AST::printAST(const ASTNode* node, int indent) {
         case NodeType::TYPE: std::cout << "TYPE"; break;
         case NodeType::NUMBER: std::cout << "NUMBER"; break;
         case NodeType::BOOLEAN: std::cout << "BOOLEAN"; break;
+        case NodeType::ARRAY_DECLARATION: std::cout << "ARRAY_DECLARATION"; break;
+        case NodeType::ARRAY_TYPE: std::cout << "ARRAY_DECLARATION_SIZE"; break;
+        case NodeType::ARRAY_LITERAL: std::cout << "ARRAY_DECLARATION_SIZE"; break;
         case NodeType::NUMBER_DOUBLE: std::cout << "NUMBER_DOUBLE"; break;
         case NodeType::NUMBER_FLOAT: std::cout << "NUMBER_FLOAT"; break;
         case NodeType::BINARY_OPERATION: std::cout << "BINARY_OPERATION"; break;

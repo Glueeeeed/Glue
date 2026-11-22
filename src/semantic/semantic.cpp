@@ -21,7 +21,6 @@ NodeType SemanticAnalyzer::promoteTypes(NodeType left, NodeType right) {
     int leftPri = getTypePriority(left);
     int rightPri = getTypePriority(right);
 
-    // If either type is not a numeric type with priority, return the higher one or left
     if (leftPri < 0 && rightPri < 0) {
         return left;
     }
@@ -32,7 +31,6 @@ NodeType SemanticAnalyzer::promoteTypes(NodeType left, NodeType right) {
         return left;
     }
 
-    // Return the type with higher priority
     if (leftPri >= rightPri) {
         return left;
     } else {
@@ -51,6 +49,10 @@ std::string SemanticAnalyzer::nodeTypeToString(NodeType t) {
         case NodeType::NUMBER_FLOAT : return "'float'";
         case NodeType::NULO : return "'nulo'";
         case NodeType::BOOLEAN: return "'boolean'";
+        case NodeType::ARRAY_TYPE: return "'array'";
+        case NodeType::ARRAY_LITERAL: return "'array literal'";
+        case NodeType::ARRAY_ACCESS: return "'array access'";
+        case NodeType::ARRAY_DECLARATION: return "'array declaration'";
 
         default: return "unknown";
     }
@@ -114,6 +116,14 @@ void SemanticAnalyzer::visit(const ASTNode* node) {
             }
             break;
         }
+        case NodeType::ARRAY_DECLARATION: {
+            visitArrayDeclaration(node);
+            break;
+        }
+        case NodeType::ARRAY_ACCESS: {
+            visitArrayAccess(node);
+            break;
+        }
         default:
             break;
     }
@@ -141,12 +151,14 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
 
 
     if (!isCompatible(varType, valueType)) {
+        bool isNumericType = (varType == "byte" || varType == "small" || varType == "int" ||
+                              varType == "long" || varType == "float" || varType == "double");
         bool isLiteral = (valNode->type == NodeType::NUMBER || valNode->type == NodeType::NUMBER_BYTE ||
                           valNode->type == NodeType::NUMBER_SMALL || valNode->type == NodeType::NUMBER_LONG ||
                           valNode->type == NodeType::NUMBER_FLOAT ||
                           valNode->type == NodeType::NUMBER_DOUBLE);
 
-        if (isLiteral && literalFitsInType(valNode->value, varType)) {
+        if (isNumericType && isLiteral && literalFitsInType(valNode->value, varType)) {
         } else if (isNarrowingConversion(varType, valueType)) {
             warn("Possible loss of precision: implicit narrowing from " + nodeTypeToString(valueType) + " to " + varTypeFormatted + " for variable '" +
     varName + "'", valNode->line, valNode->column);
@@ -242,6 +254,28 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
                 return mapStringToNodeType(info->type);
             }
             expect("Compile Error: variable '" + node->value + "' is not declared in this scope", node->line, node->column);
+            return NodeType::BOND;
+        }
+
+        case NodeType::ARRAY_ACCESS: {
+            const ASTNode* arrayExpr = node->children[0].get();
+            if (arrayExpr->type == NodeType::IDENTIFIER) {
+                SymbolInfo* info = symbolTable.lookup(arrayExpr->value);
+                if (info && info->isArray) {
+                    return mapStringToNodeType(info->elementType);
+                }
+            }
+            return NodeType::BOND;
+        }
+
+        case NodeType::ARRAY_LITERAL: {
+            if (node->children.empty()) {
+                return NodeType::BOND;
+            }
+            return inferType(node->children[0].get());
+        }
+
+        case NodeType::ARRAY_TYPE: {
             return NodeType::BOND;
         }
 
@@ -348,7 +382,6 @@ bool SemanticAnalyzer::literalFitsInType(const std::string& literalValue, const 
             return false;
         }
     }
-    // long, float, double — always accept
     return true;
 }
 
@@ -395,12 +428,14 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     }
 
     if (!isCompatible(info->type, valueType)) {
+        bool isNumericType = (info->type == "byte" || info->type == "small" || info->type == "int" ||
+                              info->type == "long" || info->type == "float" || info->type == "double");
         bool isLiteral = (valNode->type == NodeType::NUMBER || valNode->type == NodeType::NUMBER_BYTE ||
                           valNode->type == NodeType::NUMBER_SMALL || valNode->type == NodeType::NUMBER_LONG ||
                           valNode->type == NodeType::NUMBER_FLOAT ||
                           valNode->type == NodeType::NUMBER_DOUBLE);
 
-        if (isLiteral && literalFitsInType(valNode->value, info->type)) {
+        if (isNumericType && isLiteral && literalFitsInType(valNode->value, info->type)) {
         } else if (isNarrowingConversion(info->type, valueType)) {
             warn("Possible loss of precision: implicit narrowing from " + nodeTypeToString(valueType) + " to '" + info->type + "' for variable '" +
             varName + "'", valNode->line, valNode->column);
@@ -412,10 +447,8 @@ void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
 
 
     if (!info->isNullable && valueIsNullable) {
-        // Check if the variable was originally nullable (before type narrowing)
         SymbolInfo* originalInfo = symbolTable.lookupOriginal(varName);
         if (originalInfo && originalInfo->isNullable) {
-            // The variable was narrowed from nullable; assigning nulo restores nullable state
             info->isNullable = true;
         } else {
             expect("Compile Error: cannot assign nulo to non-nulo variable '" + varName + "'", valNode->line, valNode->column);
@@ -571,6 +604,140 @@ void SemanticAnalyzer::visitFunctionDeclaration(const ASTNode* node) {
     visit(bodyNode);
 
     symbolTable.exitScope();
+}
+
+void SemanticAnalyzer::visitArrayDeclaration(const ASTNode* node) {
+
+
+    if (node->children.size() < 2) {
+        expect("Compile Error: array declaration is missing type or initializer", node->line, node->column);
+        return;
+    }
+
+    const ASTNode* arrayTypeNode = node->children[0].get();
+    const ASTNode* arrayLiteralNode = node->children[1].get();
+
+    std::string varName = node->value;
+    std::string elementType = arrayTypeNode->value;
+
+    bool validElementType = (elementType == "byte" || elementType == "small" || elementType == "int" ||
+                             elementType == "long" || elementType == "float" || elementType == "double" ||
+                             elementType == "string" || elementType == "boolean" || elementType == "bool");
+    if (!validElementType) {
+        expect("Compile Error: invalid array element type '" + elementType + "'", node->line, node->column);
+        return;
+    }
+
+    int arraySize = 0;
+    if (arrayTypeNode->children.size() > 0) {
+        const ASTNode* sizeNode = arrayTypeNode->children[0].get();
+        if (sizeNode->type == NodeType::NUMBER || sizeNode->type == NodeType::NUMBER_BYTE ||
+            sizeNode->type == NodeType::NUMBER_SMALL || sizeNode->type == NodeType::NUMBER_LONG) {
+            try {
+                arraySize = std::stoi(sizeNode->value);
+            } catch (...) {
+                expect("Compile Error: invalid array size '" + sizeNode->value + "'", sizeNode->line, sizeNode->column);
+                return;
+            }
+        } else {
+            expect("Compile Error: array size must be a numeric literal", sizeNode->line, sizeNode->column);
+            return;
+        }
+    }
+
+    if (arraySize <= 0) {
+        expect("Compile Error: array size must be greater than 0", node->line, node->column);
+        return;
+    }
+
+    for (const auto& elem : arrayLiteralNode->children) {
+        NodeType elemType = inferType(elem.get());
+        if (!isCompatible(elementType, elemType)) {
+            bool isLiteral = (elem->type == NodeType::NUMBER || elem->type == NodeType::NUMBER_BYTE ||
+                              elem->type == NodeType::NUMBER_SMALL || elem->type == NodeType::NUMBER_LONG ||
+                              elem->type == NodeType::NUMBER_FLOAT || elem->type == NodeType::NUMBER_DOUBLE ||
+                              elem->type == NodeType::STRING);
+
+            if (isLiteral && literalFitsInType(elem->value, elementType)) {
+            } else if (isNarrowingConversion(elementType, elemType)) {
+                warn("Possible loss of precision: implicit narrowing from " + nodeTypeToString(elemType) +
+                     " to '" + elementType + "' in array initializer", elem->line, elem->column);
+            } else {
+                expect("Compile Error: cannot assign " + nodeTypeToString(elemType) +
+                       " to array element of type '" + elementType + "'", elem->line, elem->column);
+            }
+        }
+    }
+
+    SymbolInfo info;
+    info.type = elementType + "[]";
+    info.isArray = true;
+    info.elementType = elementType;
+    info.arraySize = arraySize;
+    info.isConst = node->isConst;
+    info.isSticky = node->isSticky;
+    info.stickyUsed = node->stickyUsed;
+    info.isNullable = node->isNullable;
+
+    if (!symbolTable.declare(varName, info)) {
+        expect("Compile Error: variable '" + varName + "' is already declared in this scope", node->line, node->column);
+    }
+}
+
+void SemanticAnalyzer::visitArrayAccess(const ASTNode* node) {
+
+
+    if (node->children.size() < 2) {
+        expect("Compile Error: array access requires an array and an index", node->line, node->column);
+        return;
+    }
+
+    const ASTNode* arrayExpr = node->children[0].get();
+    const ASTNode* indexExpr = node->children[1].get();
+
+
+    std::string arrayName;
+    if (arrayExpr->type == NodeType::IDENTIFIER) {
+        arrayName = arrayExpr->value;
+        SymbolInfo* info = symbolTable.lookup(arrayName);
+        if (!info) {
+            expect("Compile Error: variable '" + arrayName + "' is not declared in this scope", arrayExpr->line, arrayExpr->column);
+            return;
+        }
+        if (!info->isArray) {
+            expect("Compile Error: variable '" + arrayName + "' is not an array", arrayExpr->line, arrayExpr->column);
+            return;
+        }
+    } else {
+        expect("Compile Error: array access requires a variable name", arrayExpr->line, arrayExpr->column);
+        return;
+    }
+
+    NodeType indexType = inferType(indexExpr);
+    bool indexIsNumeric = (indexType == NodeType::NUMBER || indexType == NodeType::NUMBER_BYTE ||
+                           indexType == NodeType::NUMBER_SMALL || indexType == NodeType::NUMBER_LONG);
+
+    if (!indexIsNumeric) {
+        expect("Compile Error: array index must be a numeric type, got " + nodeTypeToString(indexType),
+               indexExpr->line, indexExpr->column);
+        return;
+    }
+
+    if (indexExpr->type == NodeType::NUMBER || indexExpr->type == NodeType::NUMBER_BYTE ||
+        indexExpr->type == NodeType::NUMBER_SMALL || indexExpr->type == NodeType::NUMBER_LONG) {
+        try {
+            int idx = std::stoi(indexExpr->value);
+            SymbolInfo* info = symbolTable.lookup(arrayName);
+            if (info && info->arraySize > 0) {
+                if (idx < 0 || idx >= info->arraySize) {
+                    warn("Array index " + std::to_string(idx) + " is out of bounds for array '" +
+                         arrayName + "' of size " + std::to_string(info->arraySize),
+                         indexExpr->line, indexExpr->column);
+                }
+            }
+        } catch (...) {
+        }
+    }
 }
 
 

@@ -45,6 +45,8 @@ public:
     void visitReturn(const ASTNode* node);
     void visitIf(const ASTNode* node);
     void visitWhile(const ASTNode* node);
+    void visitArrayDeclaration(const ASTNode* node);
+    void visitArrayAccess(const ASTNode* node);
     void warn(std::string msg, int line, int column);
     static bool literalFitsInType(const std::string& literalValue, const std::string& targetType);
 

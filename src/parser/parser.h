@@ -45,6 +45,8 @@ class Parser {
         std::unique_ptr<ASTNode>  parseMultiplication();
         std::unique_ptr<ASTNode> parseLiteral();
         std::unique_ptr<ASTNode>  parseFunctionCall();
+        std::unique_ptr<ASTNode> parseArrayDeclaration(const std::string& type);
+        std::unique_ptr<ASTNode> parseArrayInitializer();
         void parse();
 
         // STATEMENTS
@@ -73,6 +75,7 @@ class Parser {
         std::pair<std::string, std::string> parseFunctionHeader();
         static void expect(std::string msg,  int line = 0, int column = 0);
         void printASTCall();
+        void printAST() { ast.printAST(ast.getRoot()); }
 
         CodeGenerator& getCodeGenerator() { return codegen; }
         const ASTNode* getRoot() { return ast.getRoot(); }

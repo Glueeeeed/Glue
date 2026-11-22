@@ -27,8 +27,13 @@ void Parser::parseReturnStatement(ASTNode* parentBlock, const Token& token) {
 }
 
 void Parser::parseDeclarationStatement(ASTNode* parentBlock) {
-    parentBlock->children.push_back(parseDeclaration());
-
+    if (currentToken().type == TokenType::TYPE && peekToken().type == TokenType::LBRACKET) {
+        std::string type = currentToken().value;
+        nextToken();
+        parentBlock->children.push_back(parseArrayDeclaration(type));
+    } else {
+        parentBlock->children.push_back(parseDeclaration());
+    }
     consume(TokenType::SEMICOLON, "Syntax Error: expected ';' after declaration");
 }
 
