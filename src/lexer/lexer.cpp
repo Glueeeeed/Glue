@@ -185,7 +185,19 @@ std::vector<Token> lexer(const char* input) {
             continue;
         }
 
+        if (c == '[') {
+            int start_column = column;
+            tokens.push_back({TokenType::LBRACKET, std::string(1, '['), line, start_column});
+            i++; column++;
+            continue;
+        }
 
+        if (c == ']') {
+            int start_column = column;
+            tokens.push_back({TokenType::RBRACKET, std::string(1, ']'), line, start_column});
+            i++; column++;
+            continue;
+        }
 
         if (c == ';') {
             int start_column = column;
