@@ -15,6 +15,7 @@ struct namedValuesStruct {
     llvm::AllocaInst* pointer;
     NodeType nodeType;
     bool isNullable = false;
+    int initializedCount = 0;
 };
 
 
@@ -41,6 +42,8 @@ class CodeGenerator {
     void visit(const ASTNode* node);
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);
+    void visitArrayDeclaration(const ASTNode* node);
+    llvm::Value* visitArrayAccess(const ASTNode* node);
     void visitIfStatement(const ASTNode* node);
     void visitWhileStatement(const ASTNode* node);
     llvm::Value* visitFunction(const ASTNode* node);

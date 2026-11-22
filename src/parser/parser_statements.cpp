@@ -46,6 +46,26 @@ void Parser::parseIdentifierStatement(ASTNode* parentBlock, const Token& token) 
             expect("Syntax Error: expected ';' after function call", currentToken().line, currentToken().column);
         }
         nextToken();
+    } else if (peekToken().type == TokenType::LBRACKET) {
+        nextToken();
+        auto node = ast.makeIdentifier(token.value, token.line, token.column);
+        nextToken();
+        auto index = parseExpression();
+        consume(TokenType::RBRACKET, "Syntax Error: expected ']' after array index");
+        node = ast.makeArrayAccess(std::move(node), std::move(index));
+        
+        if (currentToken().type == TokenType::EQUALS) {
+
+            nextToken();
+            auto value = parseExpression();
+            consume(TokenType::SEMICOLON, "Syntax Error: expected ';' after array assignment");
+            auto assign = std::make_unique<ASTNode>(NodeType::ASSIGNMENT, "", false, false, false, token.line, token.column);
+            assign->children.push_back(std::move(node));
+            assign->children.push_back(std::move(value));
+            parentBlock->children.push_back(std::move(assign));
+        } else {
+            expect("Syntax Error: array access must be followed by '=' or ';' in statement context", currentToken().line, currentToken().column);
+        }
     } else {
         expect("Syntax Error: unexpected identifier in statement context", token.line, token.column);
     }

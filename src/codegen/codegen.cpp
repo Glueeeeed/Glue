@@ -211,7 +211,6 @@ void CodeGenerator::generate(const ASTNode *node) {
                 } else {
                     llvm::Value *retVal = visitExpression(retExpr);
 
-                    // Cast integer types to match expected return type
                     if (expectedRetTy->isIntegerTy() && retVal->getType()->isIntegerTy()) {
                         if (expectedRetTy->getIntegerBitWidth() != retVal->getType()->getIntegerBitWidth()) {
                             if (expectedRetTy->getIntegerBitWidth() > retVal->getType()->getIntegerBitWidth()) {
@@ -243,6 +242,9 @@ void CodeGenerator::generate(const ASTNode *node) {
             break;
         case NodeType::ASSIGNMENT:
             visitAssignment(node);
+            break;
+        case NodeType::ARRAY_DECLARATION:
+            visitArrayDeclaration(node);
             break;
         case NodeType::FUNCTION_CALL:
             visitFunction(node);
@@ -359,6 +361,46 @@ void CodeGenerator::visitWhileStatement(const ASTNode *node) {
     builder.SetInsertPoint(endBB);
 }
 
+void CodeGenerator::visitArrayDeclaration(const ASTNode *node) {
+
+    const ASTNode *typeNode = node->children[0].get();
+    const ASTNode *literals = node->children[1].get();
+
+    std::string arrName = node->value;
+    std::string typeName = typeNode->value;
+    std::string size = typeNode->children[0]->value;
+    bool isNullable = node->isNullable;
+
+
+    llvm::Type *arrType = getLLVMType(typeName, isNullable);
+    int arrSize = std::stoi(size);
+
+    llvm::ArrayType *arrArrayType = llvm::ArrayType::get(arrType, arrSize);
+    auto* allocaInst = builder.CreateAlloca(arrArrayType, nullptr, arrName);
+
+    int i = 0;
+    for (const auto& literal : literals->children) {
+        auto* value = builder.CreateGEP(arrArrayType, allocaInst,{builder.getInt32(0), builder.getInt32(i)},"arr.gep");
+        llvm::Value* literalValue = visitExpression(literal.get());
+        builder.CreateStore(literalValue, value);
+        i++;
+    }
+
+    int initCount = i;
+
+    llvm::Value* defaultValue = llvm::Constant::getNullValue(arrType);
+    for (; i < arrSize; i++) {
+        auto* value = builder.CreateGEP(arrArrayType, allocaInst, {builder.getInt32(0), builder.getInt32(i)}, "arr.gep");
+        builder.CreateStore(defaultValue, value);
+    }
+
+    if (!namedValuesStack.empty()) {
+        namedValuesStack.back()[arrName] = {allocaInst, getNodeType(typeName), isNullable, initCount};
+    }
+
+
+}
+
 
 void CodeGenerator::visitDeclaration(const ASTNode *node) {
     const ASTNode *idNode = node->children[0].get();
@@ -464,6 +506,43 @@ void CodeGenerator::visitDeclaration(const ASTNode *node) {
 void CodeGenerator::visitAssignment(const ASTNode *node) {
     const ASTNode *idNode = node->children[0].get();
     const ASTNode *valNode = node->children[1].get();
+
+    if (idNode->type == NodeType::ARRAY_ACCESS) {
+        const ASTNode *arrayNode = idNode->children[0].get();
+        const ASTNode *indexNode = idNode->children[1].get();
+
+        std::string arrayName = arrayNode->value;
+        namedValuesStruct *var = lookupNamedValue(arrayName);
+        if (!var) {
+            expect("Compile Error: array '" + arrayName + "' not found");
+            return;
+        }
+
+        llvm::Value *indexVal = visitExpression(indexNode);
+        if (!indexVal) return;
+
+        if (indexVal->getType()->isIntegerTy() && !indexVal->getType()->isIntegerTy(32)) {
+            if (indexVal->getType()->getIntegerBitWidth() < 32) {
+                indexVal = builder.CreateSExt(indexVal, builder.getInt32Ty(), "arr.idx.ext");
+            } else {
+                indexVal = builder.CreateTrunc(indexVal, builder.getInt32Ty(), "arr.idx.trunc");
+            }
+        }
+
+        llvm::Type *allocType = var->pointer->getAllocatedType();
+
+        llvm::Value *gepPtr = builder.CreateGEP(allocType, var->pointer, {builder.getInt32(0), indexVal}, "arr.gep");
+
+        llvm::Value *val = visitExpression(valNode);
+        if (!val) return;
+
+        if (val->getType()->isStructTy()) {
+            val = builder.CreateExtractValue(val, 1, "unboxed_val");
+        }
+
+        builder.CreateStore(val, gepPtr);
+        return;
+    }
 
     std::string varName = idNode->value;
     namedValuesStruct *var = lookupNamedValue(varName);
@@ -695,6 +774,63 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
         for (size_t i = 0; i < node->children.size(); ++i) {
             const ASTNode *arg = node->children[i].get();
             if (!arg) continue;
+
+            if (arg->type == NodeType::IDENTIFIER) {
+                namedValuesStruct *var = lookupNamedValue(arg->value);
+                if (var) {
+                    llvm::Type *allocType = var->pointer->getAllocatedType();
+                    if (allocType->isArrayTy()) {
+                        llvm::Value *fmtBraceOpen = builder.CreateGlobalString("{");
+                        builder.CreateCall(printfFunc, {fmtBraceOpen});
+
+                        llvm::ArrayType *arrayType = llvm::cast<llvm::ArrayType>(allocType);
+                        llvm::Type *elementType = arrayType->getElementType();
+                        uint64_t count = (uint64_t)var->initializedCount;
+
+                        for (uint64_t j = 0; j < count; ++j) {
+
+                            llvm::Value *gepPtr = builder.CreateGEP(allocType, var->pointer,
+                                {builder.getInt32(0), builder.getInt32(j)}, "shout.arr.gep");
+                            llvm::Value *elemVal = builder.CreateLoad(elementType, gepPtr, "shout.arr.elem");
+
+
+                            if (elementType->isIntegerTy(1)) {
+                                llvm::Value *extVal = builder.CreateZExt(elemVal, builder.getInt32Ty(), "shout_bool");
+                                llvm::Value *fmtBool = builder.CreateGlobalString("%d");
+                                builder.CreateCall(printfFunc, {fmtBool, extVal});
+                            } else if (elementType->isIntegerTy(64)) {
+                                llvm::Value *fmtLong = builder.CreateGlobalString("%lld");
+                                builder.CreateCall(printfFunc, {fmtLong, elemVal});
+                            } else if (elementType->isIntegerTy()) {
+                                llvm::Value *printVal = elemVal;
+                                if (elementType->isIntegerTy(8) || elementType->isIntegerTy(16)) {
+                                    printVal = builder.CreateSExt(elemVal, builder.getInt32Ty(), "shout_ext");
+                                }
+                                llvm::Value *fmtInt = builder.CreateGlobalString("%d");
+                                builder.CreateCall(printfFunc, {fmtInt, printVal});
+                            } else if (elementType->isDoubleTy()) {
+                                llvm::Value *fmtDbl = builder.CreateGlobalString("%.17g");
+                                builder.CreateCall(printfFunc, {fmtDbl, elemVal});
+                            } else if (elementType->isFloatTy()) {
+                                llvm::Value *extF = builder.CreateFPExt(elemVal, builder.getDoubleTy(), "shout_float");
+                                llvm::Value *fmtFlt = builder.CreateGlobalString("%.7g");
+                                builder.CreateCall(printfFunc, {fmtFlt, extF});
+                            } else if (elementType->isPointerTy()) {
+                                llvm::Value *fmtStr = builder.CreateGlobalString("%s");
+                                builder.CreateCall(printfFunc, {fmtStr, elemVal});
+                            }
+
+                            if (j < count - 1) {
+                                llvm::Value *fmtComma = builder.CreateGlobalString(", ");
+                                builder.CreateCall(printfFunc, {fmtComma});
+                            }
+                        }
+                        llvm::Value *fmtBraceClose = builder.CreateGlobalString("}\n");
+                        builder.CreateCall(printfFunc, {fmtBraceClose});
+                        continue;
+                    }
+                }
+            }
 
             llvm::Value *val = visitExpression(arg);
             if (!val) continue;
@@ -1083,9 +1219,46 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
         case NodeType::FUNCTION_CALL: {
             return visitFunction(node);
         }
+        case NodeType::ARRAY_ACCESS: {
+            return visitArrayAccess(node);
+        }
         default:
             return nullptr;
     }
+}
+
+llvm::Value *CodeGenerator::visitArrayAccess(const ASTNode *node) {
+
+    const ASTNode *arrayNode = node->children[0].get();
+    const ASTNode *indexNode = node->children[1].get();
+
+    std::string arrayName = arrayNode->value;
+    namedValuesStruct *var = lookupNamedValue(arrayName);
+    if (!var) {
+        expect("Compile Error: array '" + arrayName + "' not found");
+        return nullptr;
+    }
+
+    llvm::Value *indexVal = visitExpression(indexNode);
+    if (!indexVal) return nullptr;
+
+    if (indexVal->getType()->isIntegerTy() && !indexVal->getType()->isIntegerTy(32)) {
+        if (indexVal->getType()->getIntegerBitWidth() < 32) {
+            indexVal = builder.CreateSExt(indexVal, builder.getInt32Ty(), "arr.idx.ext");
+        } else {
+            indexVal = builder.CreateTrunc(indexVal, builder.getInt32Ty(), "arr.idx.trunc");
+        }
+    }
+
+    llvm::Type *allocType = var->pointer->getAllocatedType();
+
+    llvm::Value *gepPtr = builder.CreateGEP(allocType, var->pointer, {builder.getInt32(0), indexVal}, "arr.gep");
+
+    llvm::ArrayType *arrayType = llvm::cast<llvm::ArrayType>(allocType);
+    llvm::Type *elementType = arrayType->getElementType();
+    llvm::Value *loadedVal = builder.CreateLoad(elementType, gepPtr, "arr.load");
+
+    return loadedVal;
 }
 
 

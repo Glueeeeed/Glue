@@ -400,6 +400,42 @@ void SemanticAnalyzer::declareSymbol(const ASTNode *node, bool isConst, bool sti
 void SemanticAnalyzer::visitAssignment(const ASTNode* node) {
     const ASTNode* idNode  = node->children[0].get();
     const ASTNode* valNode = node->children[1].get();
+
+    if (idNode->type == NodeType::ARRAY_ACCESS) {
+        const ASTNode* arrayExpr = idNode->children[0].get();
+        const ASTNode* indexExpr = idNode->children[1].get();
+
+        if (arrayExpr->type == NodeType::IDENTIFIER) {
+            std::string arrayName = arrayExpr->value;
+            SymbolInfo* info = symbolTable.lookup(arrayName);
+            if (!info) {
+                expect("Compile Error: variable '" + arrayName + "' is not declared in this scope", arrayExpr->line, arrayExpr->column);
+                return;
+            }
+            if (!info->isArray) {
+                expect("Compile Error: variable '" + arrayName + "' is not an array", arrayExpr->line, arrayExpr->column);
+                return;
+            }
+            if (info->isConst) {
+                expect("Compile Error: cannot assign to array '" + arrayName + "' because it is a constant", idNode->line, idNode->column);
+                return;
+            }
+            NodeType indexType = inferType(indexExpr);
+            bool indexIsNumeric = (indexType == NodeType::NUMBER || indexType == NodeType::NUMBER_BYTE ||
+                                   indexType == NodeType::NUMBER_SMALL || indexType == NodeType::NUMBER_LONG);
+            if (!indexIsNumeric) {
+                expect("Compile Error: array index must be an integer", indexExpr->line, indexExpr->column);
+                return;
+            }
+            NodeType valueType = inferType(valNode);
+            if (!isCompatible(info->elementType, valueType)) {
+                expect("Compile Error: cannot assign " + nodeTypeToString(valueType) +
+                       " to array element of type '" + info->elementType + "'", valNode->line, valNode->column);
+            }
+        }
+        return;
+    }
+
     std::string varName = idNode->value;
     NodeType valueType = inferType(valNode);
     bool valueIsNullable = isExprNullable(valNode);

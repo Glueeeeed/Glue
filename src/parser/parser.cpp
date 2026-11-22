@@ -133,7 +133,14 @@ std::unique_ptr<ASTNode> Parser::parseLiteral() {
         if (peekToken().type == TokenType::LPAREN) return parseFunctionCall();
         if (token.type == TokenType::KEYWORD) goto error;
         nextToken();
-        return ast.makeIdentifier(token.value, token.line, token.column);
+        auto node = ast.makeIdentifier(token.value, token.line, token.column);
+        if (currentToken().type == TokenType::LBRACKET) {
+            nextToken();
+            auto index = parseExpression();
+            consume(TokenType::RBRACKET, "Syntax Error: expected ']' after array index");
+            node = ast.makeArrayAccess(std::move(node), std::move(index));
+        }
+        return node;
     }
 
     if (token.type == TokenType::MINUS || token.type == TokenType::NOT || token.type == TokenType::PLUS) {
