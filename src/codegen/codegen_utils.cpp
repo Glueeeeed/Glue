@@ -27,6 +27,24 @@ llvm::Type* CodeGenerator::getLLVMType(const std::string& typeName, bool isNulla
     return baseType;
 }
 
+void CodeGenerator::emitBoundsCheck(llvm::Value *indexVal, llvm::Type *allocType) {
+    llvm::ArrayType *arrayType = llvm::cast<llvm::ArrayType>(allocType);
+    uint64_t arrLen = arrayType->getNumElements();
+    auto checkBoundsFunc = module->getOrInsertFunction(
+        "glue_check_bounds",
+        llvm::FunctionType::get(builder.getVoidTy(), {builder.getInt64Ty(), builder.getInt64Ty()}, false));
+    llvm::Value *index64 = builder.CreateSExt(indexVal, builder.getInt64Ty(), "arr.idx64");
+    llvm::Value *len64 = builder.getInt64(arrLen);
+    builder.CreateCall(checkBoundsFunc, {index64, len64});
+}
+
+void CodeGenerator::emitDivisionByZeroCheck(llvm::Value *divisor) {
+    auto checkDivFunc = module->getOrInsertFunction(
+        "glue_check_division_by_zero",
+        llvm::FunctionType::get(builder.getVoidTy(), { divisor->getType() }, false));
+    builder.CreateCall(checkDivFunc, {divisor});
+}
+
 llvm::Value* CodeGenerator::toBool(llvm::Value* val) {
     if (!val) return nullptr;
     llvm::Type* ty = val->getType();

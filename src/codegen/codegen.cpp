@@ -531,6 +531,8 @@ void CodeGenerator::visitAssignment(const ASTNode *node) {
 
         llvm::Type *allocType = var->pointer->getAllocatedType();
 
+        emitBoundsCheck(indexVal, allocType);
+
         llvm::Value *gepPtr = builder.CreateGEP(allocType, var->pointer, {builder.getInt32(0), indexVal}, "arr.gep");
 
         llvm::Value *val = visitExpression(valNode);
@@ -785,9 +787,10 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
 
                         llvm::ArrayType *arrayType = llvm::cast<llvm::ArrayType>(allocType);
                         llvm::Type *elementType = arrayType->getElementType();
-                        uint64_t count = (uint64_t)var->initializedCount;
+                        uint64_t count = arrayType->getNumElements();
 
                         for (uint64_t j = 0; j < count; ++j) {
+
 
                             llvm::Value *gepPtr = builder.CreateGEP(allocType, var->pointer,
                                 {builder.getInt32(0), builder.getInt32(j)}, "shout.arr.gep");
@@ -1193,6 +1196,9 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
             } else if (node->value == "*") {
                 return isFP ? builder.CreateFMul(L, R, "multmp") : builder.CreateMul(L, R, "multmp");
             } else if (node->value == "/") {
+                if (!isFP) {
+                    emitDivisionByZeroCheck(R);
+                }
                 return isFP ? builder.CreateFDiv(L, R, "divtmp") : builder.CreateSDiv(L, R, "divtmp");
             } else if (node->value == "==") {
                 return isFP ? builder.CreateFCmpOEQ(L, R, "cmptmp") : builder.CreateICmpEQ(L, R, "cmptmp");
@@ -1207,6 +1213,7 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
             } else if (node->value == ">=") {
                 return isFP ? builder.CreateFCmpOGE(L, R, "cmptmp") : builder.CreateICmpSGE(L, R, "cmptmp");
             } else if (node->value == "%") {
+                emitDivisionByZeroCheck(R);
                 return builder.CreateSRem(L, R, "modtmp");
             }
 
@@ -1251,6 +1258,8 @@ llvm::Value *CodeGenerator::visitArrayAccess(const ASTNode *node) {
     }
 
     llvm::Type *allocType = var->pointer->getAllocatedType();
+
+    emitBoundsCheck(indexVal, allocType);
 
     llvm::Value *gepPtr = builder.CreateGEP(allocType, var->pointer, {builder.getInt32(0), indexVal}, "arr.gep");
 
@@ -1300,12 +1309,12 @@ void CodeGenerator::compileAndRun(const std::string& outputBin, bool execute, st
 
     saveIr("gir.ll");
 #if defined(_WIN32) || defined(_WIN64)
-    std::string cmd = "clang " + optimization + " gir.ll -o " + outputBin + ".exe -llegacy_stdio_definitions";
+    std::string cmd = "clang " + optimization + " gir.ll ../libs/runtime.c -o " + outputBin + ".exe -llegacy_stdio_definitions";
     int result = system(cmd.c_str());
     std::string runCmd = outputBin + ".exe";
     std::string delCmd = "del gir.ll";
 #else
-    std::string cmd = "clang " + optimization + " gir.ll -o " + outputBin;
+    std::string cmd = "clang " + optimization + " gir.ll ../libs/runtime.c -o " + outputBin;
     int result = system(cmd.c_str());
     std::string runCmd = "./" + outputBin;
     std::string delCmd = "rm gir.ll";
@@ -1388,7 +1397,7 @@ void CodeGenerator::run() {
     system("glue_program.exe");
     system("del gir.ll");
 #else
-    system("clang -O2 gir.ll -o glue_program && ./glue_program");
+    system("clang -O2 gir.ll ../libs/runtime.c -o glue_program && ./glue_program");
     system("rm gir.ll");
 #endif
 }
