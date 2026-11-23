@@ -1,6 +1,7 @@
 #include "codegen.h"
 
 #include <sstream>
+#include <fstream>
 
 #include <cstdlib>
 #include "../parser/parser.h"
@@ -14,6 +15,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 void CodeGenerator::generateCode(const ASTNode *node) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
@@ -1217,6 +1220,7 @@ llvm::Value *CodeGenerator::visitExpression(const ASTNode *node) {
                 return builder.CreateSRem(L, R, "modtmp");
             }
 
+
             return nullptr;
         }
         case NodeType::NULO:
@@ -1348,6 +1352,32 @@ void CodeGenerator::runJit() {
     }
     auto &jit = *jitResult;
 
+    std::string runtimeObj = "runtime.o";
+    std::string runtimeSrc = "../libs/runtime.c";
+    std::string compileCmd = "clang -c -fPIC " + runtimeSrc + " -o " + runtimeObj;
+    if (system(compileCmd.c_str()) != 0) {
+        std::cerr << "[Glue] JIT Error: failed to compile runtime.c!\n";
+        return;
+    }
+
+    {
+        std::error_code EC;
+        auto runtimeBuffer = llvm::MemoryBuffer::getFile(runtimeObj);
+        if (EC) {
+            std::cerr << "[Glue] JIT Error: failed to load " << runtimeObj << ": " << EC.message() << "\n";
+            std::string delCmd = "rm -f " + runtimeObj;
+            system(delCmd.c_str());
+            return;
+        }
+        if (auto err = jit->addObjectFile(std::move(*runtimeBuffer))) {
+            std::cerr << "[Glue] JIT Error: failed to load runtime object file!\n";
+            llvm::consumeError(std::move(err));
+            std::string delCmd = "rm -f " + runtimeObj;
+            system(delCmd.c_str());
+            return;
+        }
+    }
+
     auto jitContext = std::make_unique<llvm::LLVMContext>();
 
     std::string irStr;
@@ -1361,6 +1391,8 @@ void CodeGenerator::runJit() {
     auto jitModule = llvm::parseIR(buffer->getMemBufferRef(), diag, *jitContext);
     if (!jitModule) {
         std::cerr << "[Glue] JIT Error: failed to parse IR for JIT context: " << diag.getMessage().str() << "\n";
+        std::string delCmd = "rm -f " + runtimeObj;
+        system(delCmd.c_str());
         return;
     }
     jitModule->setDataLayout(module->getDataLayoutStr());
@@ -1371,6 +1403,8 @@ void CodeGenerator::runJit() {
     if (auto err = jit->addIRModule(std::move(tsModule))) {
         std::cerr << "[Glue] JIT Error: failed to load module!\n";
         llvm::consumeError(std::move(err));
+        std::string delCmd = "rm -f " + runtimeObj;
+        system(delCmd.c_str());
         return;
     }
 
@@ -1378,11 +1412,16 @@ void CodeGenerator::runJit() {
     if (auto err = mainAddrResult.takeError()) {
         std::cerr << "[Glue] JIT Error: failed to find main function!\n";
         llvm::consumeError(std::move(err));
+        std::string delCmd = "rm -f " + runtimeObj;
+        system(delCmd.c_str());
         return;
     }
 
     auto mainFunc = mainAddrResult->toPtr<int ()>();
     mainFunc();
+
+    std::string delCmd = "rm -f " + runtimeObj;
+    system(delCmd.c_str());
 }
 
 
