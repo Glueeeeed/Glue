@@ -942,6 +942,22 @@ llvm::Value *CodeGenerator::visitFunction(const ASTNode *node) {
         return builder.CreateCall(printfFunc, args);
     }
 
+    if (functionName == "abortar") {
+        const ASTNode *arg = node->children[0].get();
+
+
+        if (arg->type != NodeType::STRING) {
+            expect("Compile Error: argument '" + arg->value + "' must be a string");
+        }
+
+        llvm::Value* str = builder.CreateGlobalString(arg->value);
+        llvm::FunctionType* abortarType = llvm::FunctionType::get(builder.getVoidTy(), { builder.getPtrTy() }, false);
+
+        auto abortarFunc = module->getOrInsertFunction("glue_abortar", abortarType);
+
+        return builder.CreateCall(abortarFunc, {str});
+    }
+
     llvm::Function *callee = module->getFunction(functionName);
     if (!callee) {
         expect("Compile Error: function '" + functionName + "' not found");

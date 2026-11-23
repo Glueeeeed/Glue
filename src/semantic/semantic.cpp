@@ -502,7 +502,7 @@ void SemanticAnalyzer::visitFunctionCall(const ASTNode* node) {
 
 
 
-    if (funcName == "shout" || funcName == "shin"  || funcName == "random" || funcName == "toInt" || funcName == "toFloat" || funcName == "toDouble" ) {
+    if (funcName == "shout" || funcName == "shin"  || funcName == "random" || funcName == "toInt" || funcName == "toFloat" || funcName == "toDouble" || funcName == "abortar" ) {
         return;
     }
 
