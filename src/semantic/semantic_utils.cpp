@@ -12,7 +12,8 @@ NodeType SemanticAnalyzer::mapStringToNodeType(std::string_view typeStr) const {
         {"string", NodeType::STRING},
         {"bond", NodeType::BOND},
         {"bool", NodeType::BOOLEAN},
-        {"boolean", NodeType::BOOLEAN}
+        {"boolean", NodeType::BOOLEAN},
+        {"int[]", NodeType::ARRAY_DECLARATION}
     };
 
     if (auto it = typeMap.find(typeStr); it != typeMap.end()) {

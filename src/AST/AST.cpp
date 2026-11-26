@@ -159,8 +159,8 @@ void AST::printAST(const ASTNode* node, int indent) {
         case NodeType::NUMBER: std::cout << "NUMBER"; break;
         case NodeType::BOOLEAN: std::cout << "BOOLEAN"; break;
         case NodeType::ARRAY_DECLARATION: std::cout << "ARRAY_DECLARATION"; break;
-        case NodeType::ARRAY_TYPE: std::cout << "ARRAY_DECLARATION_SIZE"; break;
-        case NodeType::ARRAY_LITERAL: std::cout << "ARRAY_DECLARATION_SIZE"; break;
+        case NodeType::ARRAY_TYPE: std::cout << "ARRAY_TYPE"; break;
+        case NodeType::ARRAY_LITERAL: std::cout << "ARRAY_LITERALS"; break;
         case NodeType::NUMBER_DOUBLE: std::cout << "NUMBER_DOUBLE"; break;
         case NodeType::NUMBER_FLOAT: std::cout << "NUMBER_FLOAT"; break;
         case NodeType::BINARY_OPERATION: std::cout << "BINARY_OPERATION"; break;

@@ -49,10 +49,7 @@ std::string SemanticAnalyzer::nodeTypeToString(NodeType t) {
         case NodeType::NUMBER_FLOAT : return "'float'";
         case NodeType::NULO : return "'nulo'";
         case NodeType::BOOLEAN: return "'boolean'";
-        case NodeType::ARRAY_TYPE: return "'array'";
-        case NodeType::ARRAY_LITERAL: return "'array literal'";
-        case NodeType::ARRAY_ACCESS: return "'array access'";
-        case NodeType::ARRAY_DECLARATION: return "'array declaration'";
+        case NodeType::ARRAY_DECLARATION: return "'array'";
 
         default: return "unknown";
     }
@@ -163,6 +160,7 @@ void SemanticAnalyzer::visitDeclaration(const ASTNode* node) {
             warn("Possible loss of precision: implicit narrowing from " + nodeTypeToString(valueType) + " to " + varTypeFormatted + " for variable '" +
     varName + "'", valNode->line, valNode->column);
         } else {
+            std::cout << static_cast<int>(valueType) << std::endl;
             expect("Compile Error: type mismatch; cannot assign " + nodeTypeToString(valueType) + " to variable '" + varName + "' of type " +
     varTypeFormatted, valNode->line, valNode->column);
         }
@@ -273,10 +271,6 @@ NodeType SemanticAnalyzer::inferType(const ASTNode* node) {
                 return NodeType::BOND;
             }
             return inferType(node->children[0].get());
-        }
-
-        case NodeType::ARRAY_TYPE: {
-            return NodeType::BOND;
         }
 
         default:
@@ -701,6 +695,15 @@ void SemanticAnalyzer::visitArrayDeclaration(const ASTNode* node) {
     for (const auto& elem : arrayLiteralNode->children) {
 
         NodeType elemType = inferType(elem.get());
+
+        if (elem->type == NodeType::IDENTIFIER) {
+            SymbolInfo* identifierNode = symbolTable.lookup(elem->value);
+            if (identifierNode->isNullable) {
+                expect("Compile Error: cannot assign nulo variable to array element of type '" + elementType + "'", elem->line, elem->column);
+            }
+
+            return;
+        }
 
         if (!isNullable && elem->type == NodeType::NULO) {
             expect("Compile Error: cannot assign nulo to array element of type '" + elementType + "'", elem->line, elem->column);
