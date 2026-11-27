@@ -27,6 +27,7 @@ enum struct TokenType {
 struct Token {
     TokenType type;
     std::string value;
+    std::string filePath;
     int line;
     int column;
 };

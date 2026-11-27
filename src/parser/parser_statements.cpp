@@ -43,7 +43,7 @@ void Parser::parseIdentifierStatement(ASTNode* parentBlock, const Token& token) 
     } else if (peekToken().type == TokenType::LPAREN) {
         parentBlock->children.push_back(parseFunctionCall());
         if (currentToken().type != TokenType::SEMICOLON) {
-            expect("Syntax Error: expected ';' after function call", currentToken().line, currentToken().column);
+            expect("Syntax Error: expected ';' after function call", currentToken().filePath, currentToken().line, currentToken().column);
         }
         nextToken();
     } else if (peekToken().type == TokenType::LBRACKET) {
@@ -64,10 +64,10 @@ void Parser::parseIdentifierStatement(ASTNode* parentBlock, const Token& token) 
             assign->children.push_back(std::move(value));
             parentBlock->children.push_back(std::move(assign));
         } else {
-            expect("Syntax Error: array access must be followed by '=' or ';' in statement context", currentToken().line, currentToken().column);
+            expect("Syntax Error: array access must be followed by '=' or ';' in statement context", currentToken().filePath, currentToken().line, currentToken().column);
         }
     } else {
-        expect("Syntax Error: unexpected identifier in statement context", token.line, token.column);
+        expect("Syntax Error: unexpected identifier in statement context", token.filePath, token.line, token.column);
     }
 }
 
@@ -77,14 +77,14 @@ void Parser::parseIfStatement(ASTNode* parentBlock, const Token& token) {
     nextToken();
 
     if (currentToken().type != TokenType::LPAREN) {
-        expect("Syntax Error: expected '(' after 'if'", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected '(' after 'if'", currentToken().filePath, currentToken().line, currentToken().column);
     }
     nextToken();
 
     auto condition = parseExpression();
 
     if (currentToken().type != TokenType::RPAREN) {
-        expect("Syntax Error: expected ')' after 'if' condition", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected ')' after 'if' condition", currentToken().filePath, currentToken().line, currentToken().column);
     }
     nextToken();
 
@@ -111,14 +111,14 @@ void Parser::parseWhileStatement(ASTNode* parentBlock, const Token& token) {
     nextToken();
 
     if (currentToken().type != TokenType::LPAREN) {
-        expect("Syntax Error: expected '(' after 'while'", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected '(' after 'while'", currentToken().filePath, currentToken().line, currentToken().column);
     }
     nextToken();
 
     auto condition = parseExpression();
 
     if (currentToken().type != TokenType::RPAREN) {
-        expect("Syntax Error: expected ')' after 'while' condition", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected ')' after 'while' condition", currentToken().filePath, currentToken().line, currentToken().column);
     }
     nextToken();
 
@@ -135,7 +135,7 @@ void Parser::parseWhileStatement(ASTNode* parentBlock, const Token& token) {
 void Parser::parseCallStatement(ASTNode* parentBlock) {
     parentBlock->children.push_back(parseFunctionCall());
     if (currentToken().type != TokenType::SEMICOLON) {
-        expect("Syntax Error: expected ';' after function call", currentToken().line, currentToken().column);
+        expect("Syntax Error: expected ';' after function call", currentToken().filePath, currentToken().line, currentToken().column);
     }
     nextToken();
 }

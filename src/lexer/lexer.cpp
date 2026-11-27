@@ -6,11 +6,28 @@
 #include "lexer.h"
 #include "../parser/parser.h"
 
+#include <filesystem>
+#include <string>
+
+namespace fs = std::filesystem;
+
+std::string normalizePath(const std::string& rawPath) {
+    if (rawPath.empty()) return "";
+    std::error_code ec;
+    fs::path p = fs::weakly_canonical(fs::path(rawPath), ec);
+    if (ec) {
+        return rawPath;
+    }
+    return p.string();
+}
+
+
 
 
 std::vector<Token> lexer(const char* input) {
 
     std::vector<Token> tokens;
+    std::string filePath = normalizePath(input);
     std::ifstream file(input);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     file.close();
@@ -84,7 +101,7 @@ std::vector<Token> lexer(const char* input) {
 
         if (c == '.') {
             int start_column = column;
-            tokens.push_back({TokenType::DOT, std::string(1, '.'), line, start_column});
+            tokens.push_back({TokenType::DOT, std::string(1, '.'), filePath, line, start_column});
             i++; column++;
             continue;
         }
@@ -92,11 +109,11 @@ std::vector<Token> lexer(const char* input) {
         if (c == '=') {
             int start_column = column;
             if (i + 1 < len && content[i + 1] == '=') {
-                tokens.push_back({TokenType::EQUALS_EQUALS, "==", line, start_column});
+                tokens.push_back({TokenType::EQUALS_EQUALS, "==", filePath, line, start_column});
                 i += 2;
                 column += 2;
             } else {
-                tokens.push_back({TokenType::EQUALS, "=", line, start_column});
+                tokens.push_back({TokenType::EQUALS, "=", filePath, line, start_column});
                 i++;
                 column++;
             }
@@ -106,11 +123,11 @@ std::vector<Token> lexer(const char* input) {
         if (c == '>') {
             int start_column = column;
             if (i + 1 < len && content[i + 1] == '=') {
-                tokens.push_back({TokenType::GREATER_EQUALS, ">=", line, start_column});
+                tokens.push_back({TokenType::GREATER_EQUALS, ">=", filePath, line, start_column});
                 i += 2;
                 column += 2;
             } else {
-                tokens.push_back({TokenType::GREATER, ">", line, start_column});
+                tokens.push_back({TokenType::GREATER, ">", filePath, line, start_column});
                 i++;
                 column++;
             }
@@ -120,11 +137,11 @@ std::vector<Token> lexer(const char* input) {
         if (c == '!') {
             int start_column = column;
             if (i + 1 < len && content[i + 1] == '=') {
-                tokens.push_back({TokenType::NOT_EQUALS, "!=", line, start_column});
+                tokens.push_back({TokenType::NOT_EQUALS, "!=", filePath, line, start_column});
                 i += 2;
                 column += 2;
             } else {
-                tokens.push_back({TokenType::NOT, "!", line, start_column});
+                tokens.push_back({TokenType::NOT, "!", filePath, line, start_column});
                 i++;
             }
             continue;
@@ -132,14 +149,14 @@ std::vector<Token> lexer(const char* input) {
 
         if (c == '|' && i + 1 < len && content[i + 1] == '|') {
             int start_column = column;
-            tokens.push_back({TokenType::OR, "||", line, start_column});
+            tokens.push_back({TokenType::OR, "||", filePath, line, start_column});
             i += 2; column += 2;
             continue;
         }
 
         if (c == '&' && i + 1 < len && content[i + 1] == '&') {
             int start_column = column;
-            tokens.push_back({TokenType::AND, "&&", line, start_column});
+            tokens.push_back({TokenType::AND, "&&", filePath, line, start_column});
             i += 2; column += 2;
             continue;
         }
@@ -147,10 +164,10 @@ std::vector<Token> lexer(const char* input) {
         if (c == '<') {
             int start_column = column;
             if (i + 1 < len && content[i + 1] == '=') {
-                tokens.push_back({TokenType::LESS_EQUALS, "<=", line, start_column});
+                tokens.push_back({TokenType::LESS_EQUALS, "<=", filePath, line, start_column});
                 i += 2; column += 2;
             } else {
-                tokens.push_back({TokenType::LESS, "<", line, start_column});
+                tokens.push_back({TokenType::LESS, "<", filePath, line, start_column});
                 i++; column++;
             }
             continue;
@@ -158,14 +175,14 @@ std::vector<Token> lexer(const char* input) {
 
         if (c == '(') {
             int start_column = column;
-            tokens.push_back({TokenType::LPAREN, std::string(1, '('), line, start_column});
+            tokens.push_back({TokenType::LPAREN, std::string(1, '('), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == ')') {
             int start_column = column;
-            tokens.push_back({TokenType::RPAREN, std::string(1, ')'), line, start_column});
+            tokens.push_back({TokenType::RPAREN, std::string(1, ')'), filePath, line, start_column});
             i++; column++;
             continue;
         }
@@ -173,77 +190,77 @@ std::vector<Token> lexer(const char* input) {
 
         if (c == '{') {
             int start_column = column;
-            tokens.push_back({TokenType::LBRACE, std::string(1, '{'), line, start_column});
+            tokens.push_back({TokenType::LBRACE, std::string(1, '{'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '}') {
             int start_column = column;
-            tokens.push_back({TokenType::RBRACE, std::string(1, '}'), line, start_column});
+            tokens.push_back({TokenType::RBRACE, std::string(1, '}'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '[') {
             int start_column = column;
-            tokens.push_back({TokenType::LBRACKET, std::string(1, '['), line, start_column});
+            tokens.push_back({TokenType::LBRACKET, std::string(1, '['), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == ']') {
             int start_column = column;
-            tokens.push_back({TokenType::RBRACKET, std::string(1, ']'), line, start_column});
+            tokens.push_back({TokenType::RBRACKET, std::string(1, ']'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == ';') {
             int start_column = column;
-            tokens.push_back({TokenType::SEMICOLON, std::string(1, ';'), line, start_column});
+            tokens.push_back({TokenType::SEMICOLON, std::string(1, ';'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '+') {
             int start_column = column;
-            tokens.push_back({TokenType::PLUS, std::string(1, '+'), line, start_column});
+            tokens.push_back({TokenType::PLUS, std::string(1, '+'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '-') {
             int start_column = column;
-            tokens.push_back({TokenType::MINUS, std::string(1, '-'), line, start_column});
+            tokens.push_back({TokenType::MINUS, std::string(1, '-'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '*') {
             int start_column = column;
-            tokens.push_back({TokenType::MULTIPLY, std::string(1, '*'), line, start_column});
+            tokens.push_back({TokenType::MULTIPLY, std::string(1, '*'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '%') {
             int start_column = column;
-            tokens.push_back({TokenType::MOD, std::string(1, '%'), line, start_column});
+            tokens.push_back({TokenType::MOD, std::string(1, '%'), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == ',') {
             int start_column = column;
-            tokens.push_back({TokenType::COMMA, std::string(1, ','), line, start_column});
+            tokens.push_back({TokenType::COMMA, std::string(1, ','), filePath, line, start_column});
             i++; column++;
             continue;
         }
 
         if (c == '/') {
             int start_column = column;
-            tokens.push_back({TokenType::DIVISION, std::string(1, '/'), line, start_column});
+            tokens.push_back({TokenType::DIVISION, std::string(1, '/'), filePath, line, start_column});
             i++; column++;
             continue;
         }
@@ -262,17 +279,17 @@ std::vector<Token> lexer(const char* input) {
             } else {
                 std::cerr << "Unterminated string starting at " << line << ":" << start_column << '\n';
             }
-            tokens.push_back({TokenType::STRING, word, line, start_column});
+            tokens.push_back({TokenType::STRING, word, filePath, line, start_column});
             continue;
         }
 
         if (c == '?') {
             int start_column = column;
             if (i + 1 < len && content[i + 1] == '?') {
-                tokens.push_back({TokenType::COALESCE, "sino", line, start_column});
+                tokens.push_back({TokenType::COALESCE, "sino", filePath, line, start_column});
                 i += 2; column += 2;
             } else {
-                tokens.push_back({TokenType::QUESTION, "?", line, start_column});
+                tokens.push_back({TokenType::QUESTION, "?", filePath, line, start_column});
                 i++; column++;
             }
             continue;
@@ -307,11 +324,11 @@ std::vector<Token> lexer(const char* input) {
             }
 
             if (isFloat) {
-                tokens.push_back({TokenType::NUMBER_FLOAT, num, line, start_column});
+                tokens.push_back({TokenType::NUMBER_FLOAT, num, filePath, line, start_column});
             } else if (hasDot) {
-                tokens.push_back({TokenType::NUMBER_DOUBLE, num, line, start_column});
+                tokens.push_back({TokenType::NUMBER_DOUBLE, num, filePath, line, start_column});
             } else {
-                tokens.push_back({TokenType::NUMBER, num, line, start_column});
+                tokens.push_back({TokenType::NUMBER, num, filePath, line, start_column});
             }
             continue;
         }
@@ -326,24 +343,24 @@ std::vector<Token> lexer(const char* input) {
 
             auto it = KEYWORDS.find(word);
             if (it != KEYWORDS.end()) {
-                tokens.push_back({it->second, word, line, start_column});
+                tokens.push_back({it->second, word, filePath, line, start_column});
             } else if (word == "true") {
-                tokens.push_back({TokenType::BOOLEAN_TRUE, word, line, start_column});
+                tokens.push_back({TokenType::BOOLEAN_TRUE, word, filePath, line, start_column});
             } else if (word == "false") {
-                tokens.push_back({TokenType::BOOLEAN_FALSE, word, line, start_column});
+                tokens.push_back({TokenType::BOOLEAN_FALSE, word, filePath, line, start_column});
             } else {
-                tokens.push_back({TokenType::IDENTIFIER, word, line, start_column});
+                tokens.push_back({TokenType::IDENTIFIER, word, filePath, line, start_column});
             }
 
             continue;
         }
         std::string word(1,c);
-        tokens.push_back({TokenType::UNKNOWN, word, line, column});
+        tokens.push_back({TokenType::UNKNOWN, word, filePath, line, column});
 
         i++; column++;
     }
 
-    tokens.push_back({TokenType::END_OF_FILE, std::string(1, ' '), line, column});
+    tokens.push_back({TokenType::END_OF_FILE, std::string(1, ' '), filePath, line, column});
 
     return tokens;
 }

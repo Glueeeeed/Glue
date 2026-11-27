@@ -17,9 +17,9 @@ void Parser::parse() {
         if (cToken.type == TokenType::KEYWORD && cToken.value == "func") {
             parseFunctionDeclaration();
         } else if (cToken.type == TokenType::UNKNOWN) {
-            expect("Syntax Error: unexpected token '" + cToken.value + "'", cToken.line, cToken.column);
+            expect("Syntax Error: unexpected token '" + cToken.value + "'", cToken.filePath, cToken.line, cToken.column);
         } else {
-            expect("Syntax Error: Only function definitions allowed at global scope. Found: '" + cToken.value + "'", cToken.line, cToken.column);
+            expect("Syntax Error: Only function definitions allowed at global scope. Found: '" + cToken.value + "'", cToken.filePath, cToken.line, cToken.column);
         }
     }
 }
@@ -35,7 +35,7 @@ std::unique_ptr<ASTNode> Parser::parseArrayInitializer() {
         if (currentToken().type == TokenType::COMMA) {
             nextToken();
         } else if (currentToken().type != TokenType::RBRACE) {
-            expect("Syntax Error: expected ',' or '}' in array initializer", currentToken().line, currentToken().column);
+            expect("Syntax Error: expected ',' or '}' in array initializer", currentToken().filePath, currentToken().line, currentToken().column);
         }
     }
     
@@ -123,7 +123,7 @@ void Parser::parseStatement(ASTNode* parentBlock) {
     } else if (token.type == TokenType::KEYWORD && token.value == "sigue") {
         parseContinueStatement(parentBlock, token);
     } else {
-        expect("Syntax Error: unknown statement '" + token.value + "'", token.line, token.column);
+        expect("Syntax Error: unknown statement '" + token.value + "'", token.filePath, token.line, token.column);
     }
 }
 
@@ -170,7 +170,7 @@ std::unique_ptr<ASTNode> Parser::parseLiteral() {
         case TokenType::LPAREN: {
             auto node = parseExpression();
             if (currentToken().type != TokenType::RPAREN) {
-                expect("Syntax Error: expected ')'", currentToken().line, currentToken().column);
+                expect("Syntax Error: expected ')'", currentToken().filePath, currentToken().line, currentToken().column);
             }
             nextToken();
             return node;
@@ -179,7 +179,7 @@ std::unique_ptr<ASTNode> Parser::parseLiteral() {
     }
 
 error:
-    expect("Syntax Error: expected a literal or identifier", token.line, token.column);
+    expect("Syntax Error: expected a literal or identifier", token.filePath, token.line, token.column);
     return nullptr;
 }
 
@@ -333,7 +333,7 @@ std::unique_ptr<ASTNode> Parser::parseDeclaration() {
     } else {
         if (!isNullable) {
             expect("Syntax Error: non-nulo variable '" + identifier + "' of type '" + type + "' must be initialized with '='",
-                   currentToken().line, currentToken().column);
+                   currentToken().filePath, currentToken().line, currentToken().column);
         }
 
         expr = ast.makeNulo("nulo", idToken.line, idToken.column);
@@ -352,7 +352,7 @@ std::unique_ptr<ASTNode> Parser::parseFunctionCall() {
     std::string functionName = idToken.value;
     
     if (idToken.type != TokenType::KEYWORD && idToken.type != TokenType::IDENTIFIER) {
-        expect("Syntax Error: expected a function name to start a function call", idToken.line,
+        expect("Syntax Error: expected a function name to start a function call", idToken.filePath, idToken.line,
                idToken.column);
     }
     nextToken();
@@ -370,8 +370,8 @@ std::unique_ptr<ASTNode> Parser::parseFunctionCall() {
             } else if (currentToken().type == TokenType::COMMA) {
                 nextToken();
             } else {
-                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().line,
-                       currentToken().column);
+                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().filePath,
+                       currentToken().line, currentToken().column);
             }
         }
     }
@@ -399,8 +399,8 @@ void Parser::parseArgument() {
             if (currentToken().type == TokenType::COMMA) {
                 nextToken();
             } else {
-                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().line,
-                       currentToken().column);
+                expect("Syntax Error: expected ',' or ')' between function arguments", currentToken().filePath,
+                       currentToken().line, currentToken().column);
             }
         }
     }
@@ -443,8 +443,8 @@ void Parser::printASTCall() {
 }
 
 
-void Parser::expect(std::string msg, int line, int column) {
+void Parser::expect(std::string msg, std::string filePath, int line, int column) {
     std::stringstream stream;
-    stream << msg << " at " << line << ":" << column << std::endl;
+    stream << filePath << " at "  << line << ":" << column << "\n" << msg << std::endl;
     throw ParseError(stream.str());
 }

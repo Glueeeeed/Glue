@@ -9,7 +9,7 @@ std::vector<std::pair<std::string, std::string>> Parser::parse_args() {
     if (currentToken().type != TokenType::RPAREN) {
         while (true) {
             if (currentToken().type != TokenType::TYPE) {
-                expect("Syntax Error: expected parameter type", currentToken().line, currentToken().column);
+                expect("Syntax Error: expected parameter type", currentToken().filePath, currentToken().line, currentToken().column);
             }
             std::string paramType = currentToken().value;
             nextToken();
@@ -20,7 +20,7 @@ std::vector<std::pair<std::string, std::string>> Parser::parse_args() {
             }
 
             if (currentToken().type != TokenType::IDENTIFIER) {
-                expect("Syntax Error: expected parameter name", currentToken().line, currentToken().column);
+                expect("Syntax Error: expected parameter name", currentToken().filePath, currentToken().line, currentToken().column);
             }
             std::string paramName = currentToken().value;
             nextToken();
@@ -32,7 +32,7 @@ std::vector<std::pair<std::string, std::string>> Parser::parse_args() {
             } else if (currentToken().type == TokenType::RPAREN) {
                 break;
             } else {
-                expect("Syntax Error: expected ',' or ')' in parameter list", currentToken().line, currentToken().column);
+                expect("Syntax Error: expected ',' or ')' in parameter list", currentToken().filePath, currentToken().line, currentToken().column);
             }
         }
     }
@@ -41,7 +41,7 @@ std::vector<std::pair<std::string, std::string>> Parser::parse_args() {
 
     void Parser::consume(TokenType expectedType, const std::string& errMsg) {
         if (currentToken().type != expectedType) {
-            expect("Syntax Error: " + errMsg, currentToken().line, currentToken().column);
+            expect( errMsg, currentToken().filePath, currentToken().line, currentToken().column);
         }
         nextToken();
     }
@@ -62,14 +62,14 @@ std::pair<std::string, std::string> Parser::parseFunctionHeader() {
 
         Token idToken = currentToken();
         if (idToken.type != TokenType::IDENTIFIER) {
-            expect("Syntax Error: expected function name", idToken.line, idToken.column);
+            expect("Syntax Error: expected function name", idToken.filePath, idToken.line, idToken.column);
         }
         funcName = idToken.value;
     } else if (typeOrIdToken.type == TokenType::IDENTIFIER) {
         returnType = "void";
         funcName = typeOrIdToken.value;
     } else {
-        expect("Syntax Error: expected return type or function name after 'func'", typeOrIdToken.line, typeOrIdToken.column);
+        expect("Syntax Error: expected return type or function name after 'func'", typeOrIdToken.filePath, typeOrIdToken.line, typeOrIdToken.column);
     }
 
     return {returnType, funcName};
