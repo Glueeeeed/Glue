@@ -22,6 +22,49 @@ NodeType SemanticAnalyzer::mapStringToNodeType(std::string_view typeStr) const {
     return NodeType::BOND;
 }
 
+SymbolInfo SemanticAnalyzer::buildFunctionSymbol(const ASTNode* node) {
+    std::string returnType = node->children[0]->value;
+    bool returnIsNullable = false;
+    if (!returnType.empty() && returnType.back() == '?') {
+        returnIsNullable = true;
+        returnType.pop_back();
+    }
+
+    SymbolInfo info;
+    info.type = returnType;
+    info.isNullable = returnIsNullable;
+
+    const ASTNode* paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
+    if (paramsNode) {
+        for (const auto& paramNode : paramsNode->children) {
+            std::string pType = paramNode->children[1]->value;
+            bool pNullable = false;
+            if (!pType.empty() && pType.back() == '?') {
+                pNullable = true;
+                pType.pop_back();
+            }
+            info.args.push_back(pType);
+            info.argsNullable.push_back(pNullable);
+        }
+    }
+    return info;
+}
+
+void SemanticAnalyzer::registerFunctionSignatures(const ASTNode* programNode) {
+    if (!programNode) return;
+    for (const auto& child : programNode->children) {
+        if (!child || child->type != NodeType::FUNCTION_DECLARATION) continue;
+
+        const std::string& funcName = child->value;
+        SymbolInfo info = buildFunctionSymbol(child.get());
+
+        if (!symbolTable.declare(funcName, info)) {
+            expect("Compile Error: function '" + funcName + "' is already declared",
+                   child->line, child->column);
+        }
+    }
+}
+
 
 std::string SemanticAnalyzer::extractNotNullVar(const ASTNode* cond) {
     if (!cond) return "";

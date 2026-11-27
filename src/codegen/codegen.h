@@ -49,6 +49,9 @@ class CodeGenerator {
     llvm::Value* visitFunction(const ASTNode* node);
     llvm::Value* visitExpression(const ASTNode* node);
 
+    llvm::FunctionType *buildLLVMFunctionType(const ASTNode *node, std::string &outFuncName);
+    void declareFunctions(const ASTNode *root);
+
     // void newHeapString(std::string str, llvm::Value *type);
     // llvm::Value* createHeapString(std::string str);
 

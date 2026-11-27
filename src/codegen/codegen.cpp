@@ -22,9 +22,58 @@ void CodeGenerator::generateCode(const ASTNode *node) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
     module->setTargetTriple(llvm::Triple(llvm::sys::getDefaultTargetTriple()));
 
+    declareFunctions(node);
     generate(node);
 
     save();
+}
+
+llvm::FunctionType *CodeGenerator::buildLLVMFunctionType(const ASTNode *node, std::string &outFuncName) {
+    outFuncName = (node->value == "Main") ? "main" : node->value;
+
+    std::string returnTypeName = (!node->children.empty() && node->children[0]->type == NodeType::TYPE)
+                                     ? node->children[0]->value
+                                     : "void";
+
+    bool returnIsNullable = false;
+    if (!returnTypeName.empty() && returnTypeName.back() == '?') {
+        returnIsNullable = true;
+        returnTypeName.pop_back();
+    }
+
+    llvm::Type *retType = getLLVMType(returnTypeName, returnIsNullable);
+
+    std::vector<llvm::Type *> paramTypes;
+    const ASTNode *paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
+    if (paramsNode) {
+        for (const auto &param : paramsNode->children) {
+            std::string pType = param->children[1]->value;
+            bool pNullable = false;
+            if (!pType.empty() && pType.back() == '?') {
+                pNullable = true;
+                pType.pop_back();
+            }
+            paramTypes.push_back(getLLVMType(pType, pNullable));
+        }
+    }
+
+    return llvm::FunctionType::get(retType, paramTypes, false);
+}
+
+void CodeGenerator::declareFunctions(const ASTNode *root) {
+    if (!root) return;
+
+    for (const auto &child : root->children) {
+        if (!child || child->type != NodeType::FUNCTION_DECLARATION) continue;
+
+        std::string funcName;
+        llvm::FunctionType *funcType = buildLLVMFunctionType(child.get(), funcName);
+
+        if (!module->getFunction(funcName)) {
+            llvm::Function::Create(
+                funcType, llvm::Function::ExternalLinkage, funcName, module.get());
+        }
+    }
 }
 
 void CodeGenerator::enterScope() {
@@ -92,13 +141,16 @@ void CodeGenerator::generate(const ASTNode *node) {
                 }
             }
 
-            llvm::FunctionType *funcType = llvm::FunctionType::get(retType, paramTypes, false);
 
-            llvm::Function *func = llvm::Function::Create(
-                funcType, llvm::Function::ExternalLinkage, funcName, module.get());
+            llvm::FunctionType *funcType = buildLLVMFunctionType(node, funcName);
+
+            llvm::Function *func = module->getFunction(funcName);
+            if (!func) {
+                func = llvm::Function::Create(
+                    funcType, llvm::Function::ExternalLinkage, funcName, module.get());
+            }
 
             currentFunction = func;
-
             llvm::BasicBlock *entry = llvm::BasicBlock::Create(context, "entry", func);
             builder.SetInsertPoint(entry);
 

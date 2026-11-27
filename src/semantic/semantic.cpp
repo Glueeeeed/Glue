@@ -54,8 +54,11 @@ std::string SemanticAnalyzer::nodeTypeToString(NodeType t) {
         default: return "unknown";
     }
 }
-
 void SemanticAnalyzer::analyse(const ASTNode *root) {
+    if (!root) return;
+    if (root->type == NodeType::PROGRAM) {
+        registerFunctionSignatures(root);
+    }
     visit(root);
 }
 

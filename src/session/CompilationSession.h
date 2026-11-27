@@ -31,6 +31,37 @@ public:
         units_.push_back(std::move(unit));
     }
 
+    const SourceUnit* findUnit(const std::string& path) const {
+        std::string canon = normalizePath(path);
+        for (const auto& u : units_) {
+            if (u.canonicalPath == canon) {
+                return &u;
+            }
+        }
+        return nullptr;
+    }
+
+    bool hasUnit(const std::string& path) const {
+        return findUnit(path) != nullptr;
+    }
+
+
+    const SourceUnit& addUnit(std::string rawPath) {
+        std::string canon = normalizePath(std::move(rawPath));
+        if (const SourceUnit* existing = findUnit(canon)) {
+            return *existing;
+        }
+
+        SourceUnit unit;
+        unit.canonicalPath = canon;
+        unit.tokens = lexer(canon.c_str());
+        if (unit.tokens.empty()) {
+            throw std::runtime_error("Cannot load file: " + canon);
+        }
+        units_.push_back(std::move(unit));
+        return units_.back();
+    }
+
     const SourceUnit& mainUnit() const { return units_.front(); }
     const std::string& entryPath() const { return entryPath_; }
 

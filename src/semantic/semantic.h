@@ -49,6 +49,9 @@ public:
     void visitArrayAccess(const ASTNode* node);
     void warn(std::string msg, int line, int column);
     static bool literalFitsInType(const std::string& literalValue, const std::string& targetType);
+    SymbolInfo buildFunctionSymbol(const ASTNode* node);
+    void registerFunctionSignatures(const ASTNode* programNode);
+
 
 };
 
