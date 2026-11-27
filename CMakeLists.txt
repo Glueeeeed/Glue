@@ -75,6 +75,8 @@ add_executable(glue
         src/parser/parser_statements.cpp
         src/semantic/semantic_utils.cpp
         src/codegen/codegen_utils.cpp
+        src/session/SourceUnit.h
+        src/session/CompilationSession.h
 )
 
 target_include_directories(glue PRIVATE

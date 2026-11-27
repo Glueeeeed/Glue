@@ -5,21 +5,12 @@
 #include <cctype>
 #include "lexer.h"
 #include "../parser/parser.h"
+#include "../session/CompilationSession.h"
 
 #include <filesystem>
 #include <string>
 
 namespace fs = std::filesystem;
-
-std::string normalizePath(const std::string& rawPath) {
-    if (rawPath.empty()) return "";
-    std::error_code ec;
-    fs::path p = fs::weakly_canonical(fs::path(rawPath), ec);
-    if (ec) {
-        return rawPath;
-    }
-    return p.string();
-}
 
 
 

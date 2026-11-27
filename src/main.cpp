@@ -2,13 +2,11 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "lexer/lexer.h"
-#include "AST/ast.h"
 #include "parser/parser.h"
 #include "codegen/codegen.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
+#include "session/CompilationSession.h"
 using namespace std;
 
 
@@ -129,10 +127,17 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    auto tokens = lexer(opts.inputFile.c_str());
+    CompilationSession session(opts.inputFile);
+    try {
+        session.loadEntry();
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        return 1;
+    }
 
     llvm::LLVMContext context;
-    Parser parser(tokens, context);
+    Parser parser(session.mainUnit().tokens, context);
+
 
     try {
         parser.parse();
