@@ -18,6 +18,7 @@ enum class NodeType {
     IF_STATEMENT,
     PARAMETER,
     WHILE_STATEMENT,
+    IMPORT_STATEMENT,
     BREAK_STATEMENT,
     CONTINUE_STATEMENT,
     IDENTIFIER,
@@ -76,7 +77,6 @@ class AST {
     std::unique_ptr<ASTNode> makeArrayAccess(std::unique_ptr<ASTNode> array, std::unique_ptr<ASTNode> index);
 
 
-
     std::unique_ptr<ASTNode> makeParameter(const std::string& name, const std::string& type);
     std::unique_ptr<ASTNode> makeIdentifier(const std::string& name, int line = 0, int column = 0);
     std::unique_ptr<ASTNode> makeDeclaration(const std::string& name,  bool isConst, bool stickyUsed, bool isSticky, bool isNullable, int line = 0, int column = 0);
@@ -87,6 +87,7 @@ class AST {
     void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false, bool isNullable = false, int line = 0, int column = 0);
     void addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> params, std::unique_ptr<ASTNode> body);
     void addFunctionArgument(std::unique_ptr<ASTNode> arg);
+    void addImport(std::string import);
     std::unique_ptr<ASTNode>  addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line = 0, int column = 0);
 
 

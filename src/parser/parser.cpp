@@ -14,7 +14,9 @@ void Parser::parse() {
         Token cToken = currentToken();
         Token nToken = peekToken();
 
-        if (cToken.type == TokenType::KEYWORD && cToken.value == "func") {
+        if (cToken.type == TokenType::KEYWORD && cToken.value == "import") {
+            parseImportStatement();
+        } else if (cToken.type == TokenType::KEYWORD && cToken.value == "func") {
             parseFunctionDeclaration();
         } else if (cToken.type == TokenType::UNKNOWN) {
             expect("Syntax Error: unexpected token '" + cToken.value + "'", cToken.filePath, cToken.line, cToken.column);

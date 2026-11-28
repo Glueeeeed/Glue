@@ -131,6 +131,11 @@ void AST::addFunctionCall(std::string &name, std::vector<std::unique_ptr<ASTNode
     addChild(std::move(call));
 }
 
+void AST::addImport(std::string import) {
+    auto importNode = std::make_unique<ASTNode>(NodeType::IMPORT_STATEMENT, import);
+    addChild(std::move(importNode));
+}
+
 void AST::addFunctionArgument(std::unique_ptr<ASTNode> arg) {
     args.push_back(std::move(arg));
 }
@@ -167,6 +172,7 @@ void AST::printAST(const ASTNode* node, int indent) const {
         case NodeType::IF_STATEMENT: std::cout << "IF_STATEMENT"; break;
         case NodeType::BREAK_STATEMENT: std::cout << "BREAK_STATEMENT"; break;
         case NodeType::CONTINUE_STATEMENT: std::cout << "CONTINUE_STATEMENT"; break;
+        case NodeType::IMPORT_STATEMENT: std::cout << "IMPORT_STATEMENT"; break;
         case NodeType::NULO: std::cout << "NULO"; break;
     }
 

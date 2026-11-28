@@ -51,6 +51,7 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"else", TokenType::KEYWORD},
     {"while", TokenType::KEYWORD},
     {"break", TokenType::KEYWORD},
+    {"import", TokenType::KEYWORD},
     {"continue", TokenType::KEYWORD},
     {"return", TokenType::KEYWORD},
     {"true", TokenType::BOOLEAN_TRUE},

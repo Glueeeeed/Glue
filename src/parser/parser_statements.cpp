@@ -10,6 +10,16 @@ void Parser::parseBlockStatement(ASTNode* parentBlock) {
     parentBlock->children.push_back(std::move(blockNode));
 }
 
+void Parser::parseImportStatement() {
+    nextToken();
+    Token token = currentToken();
+    std::string importName = token.value;
+    token.value = token.value;
+    consume(TokenType::IDENTIFIER, "Syntax Error: expected identifier after 'import'");
+    consume(TokenType::SEMICOLON, "Syntax Error: expected ';' after import statement");
+    ast.addImport(importName);
+}
+
 void Parser::parseReturnStatement(ASTNode* parentBlock, const Token& token) {
     int retLine = token.line;
     int retCol = token.column;
@@ -103,6 +113,10 @@ void Parser::parseIfStatement(ASTNode* parentBlock, const Token& token) {
     }
 
     parentBlock->children.push_back(std::move(ifNode));
+}
+
+std::unique_ptr<ASTNode> parseImportStatement() {
+
 }
 
 void Parser::parseWhileStatement(ASTNode* parentBlock, const Token& token) {
