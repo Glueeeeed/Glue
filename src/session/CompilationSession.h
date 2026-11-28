@@ -187,7 +187,23 @@ public:
         if (!codegenComplete_) {
             throw std::logic_error("Generate code before compiling the program");
         }
-        codeGenerator_.compileAndRun(outputBin, execute, optimization);
+
+        std::vector<std::string> cSourceFiles;
+        for (const SourceUnit& unit : units_) {
+            if (unit.canonicalPath == entryPath_) continue;
+
+            std::filesystem::path cSourcePath(unit.canonicalPath);
+            cSourcePath.replace_extension(".c");
+            std::error_code ec;
+            if (!std::filesystem::is_regular_file(cSourcePath, ec) || ec) continue;
+
+            const std::string canonicalCSourcePath = normalizePath(cSourcePath.string());
+            if (std::find(cSourceFiles.begin(), cSourceFiles.end(), canonicalCSourcePath) == cSourceFiles.end()) {
+                cSourceFiles.push_back(canonicalCSourcePath);
+            }
+        }
+
+        codeGenerator_.compileAndRun(outputBin, execute, optimization, cSourceFiles);
     }
 
     void runJit() {

@@ -45,6 +45,7 @@ static const std::unordered_map<std::string, TokenType> KEYWORDS = {
     {"shout", TokenType::KEYWORD},
     {"shin", TokenType::KEYWORD},
     {"func", TokenType::KEYWORD},
+    {"externo", TokenType::KEYWORD},
     {"const", TokenType::KEYWORD},
     {"sticky", TokenType::KEYWORD},
     {"if", TokenType::KEYWORD},

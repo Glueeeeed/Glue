@@ -12,6 +12,7 @@ struct SymbolInfo {
     bool isConst = false;
     bool isSticky = false;
     bool isNullable = false;
+    bool isExternalFunction = false;
     std::string value;
     mutable bool stickyUsed = false;
     bool isArray = false;

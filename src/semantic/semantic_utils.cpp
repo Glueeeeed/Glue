@@ -33,8 +33,9 @@ SymbolInfo SemanticAnalyzer::buildFunctionSymbol(const ASTNode* node) {
     SymbolInfo info;
     info.type = returnType;
     info.isNullable = returnIsNullable;
+    info.isExternalFunction = node->type == NodeType::EXTERNAL_FUNCTION_DECLARATION;
 
-    const ASTNode* paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
+    const ASTNode* paramsNode = (node->children.size() > 1) ? node->children[1].get() : nullptr;
     if (paramsNode) {
         for (const auto& paramNode : paramsNode->children) {
             std::string pType = paramNode->children[1]->value;
@@ -53,7 +54,33 @@ SymbolInfo SemanticAnalyzer::buildFunctionSymbol(const ASTNode* node) {
 void SemanticAnalyzer::registerFunctionSignatures(const ASTNode* programNode) {
     if (!programNode) return;
     for (const auto& child : programNode->children) {
-        if (!child || child->type != NodeType::FUNCTION_DECLARATION) continue;
+        if (!child || (child->type != NodeType::FUNCTION_DECLARATION &&
+                       child->type != NodeType::EXTERNAL_FUNCTION_DECLARATION)) continue;
+
+        if (child->type == NodeType::EXTERNAL_FUNCTION_DECLARATION) {
+            const ASTNode* returnTypeNode = child->children[0].get();
+            const bool isNullable = returnTypeNode->isNullable ||
+                                    (!returnTypeNode->value.empty() && returnTypeNode->value.back() == '?');
+            if (isNullable) {
+                expect("Compile Error: externo function '" + child->value +
+                       "' must return non-nullable type", child->line, child->column);
+            }
+            if (child->value == "main" || child->value == "Main") {
+                expect("Compile Error: externo cannot declare the program entry function 'main'",
+                       child->line, child->column);
+            }
+
+            const ASTNode* paramsNode = child->children[1].get();
+            for (const auto& param : paramsNode->children) {
+                const ASTNode* paramTypeNode = param->children[1].get();
+                const bool isNullable = paramTypeNode->isNullable ||
+                                        (!paramTypeNode->value.empty() && paramTypeNode->value.back() == '?');
+                if (isNullable) {
+                    expect("Compile Error: externo function '" + child->value +
+                           "' parameters cannot be nullable", child->line, child->column);
+                }
+            }
+        }
 
         const std::string& funcName = child->value;
         SymbolInfo info = buildFunctionSymbol(child.get());

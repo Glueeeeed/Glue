@@ -37,6 +37,7 @@ class CodeGenerator {
     llvm::AllocaInst* returnValue = nullptr;
     llvm::Function* printf = nullptr;
     llvm::Function* currentFunction = nullptr;
+    bool hasExternalDeclarations = false;
     void enterScope();
     void exitScope();
     namedValuesStruct* lookupNamedValue(const std::string& name);
@@ -86,7 +87,8 @@ public:
     void saveIr(const std::string& filename = "gir.ll");
 
 
-    void compileAndRun(const std::string& outputBin = "glue_program", bool execute = false, std::string optimization = "-O2");
+    void compileAndRun(const std::string& outputBin = "glue_program", bool execute = false,
+                       std::string optimization = "-O2", const std::vector<std::string>& linkCFiles = {});
     void runJit();
 
     void save();

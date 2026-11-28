@@ -16,6 +16,8 @@ void Parser::parse() {
 
         if (cToken.type == TokenType::KEYWORD && cToken.value == "import") {
             parseImportStatement();
+        } else if (cToken.type == TokenType::KEYWORD && cToken.value == "externo") {
+            parseExternalFunctionDeclaration();
         } else if (cToken.type == TokenType::KEYWORD && cToken.value == "func") {
             parseFunctionDeclaration();
         } else if (cToken.type == TokenType::UNKNOWN) {
@@ -99,6 +101,32 @@ void Parser::parseFunctionDeclaration() {
     }
 
     ast.addFunctionDefinition(funcName, returnType, std::move(paramsNode), std::move(body));
+}
+
+void Parser::parseExternalFunctionDeclaration() {
+    nextToken();
+    if (currentToken().type != TokenType::KEYWORD || currentToken().value != "func") {
+        expect("Syntax Error: expected 'func' after 'externo'", currentToken().filePath,
+               currentToken().line, currentToken().column);
+    }
+    nextToken();
+
+    const auto [returnType, funcName] = parseFunctionHeader();
+    Token nameToken = currentToken();
+    nextToken();
+
+    consume(TokenType::LPAREN, "Syntax Error: expected '(' after external function name");
+    const auto params = parse_args();
+    consume(TokenType::RPAREN, "Syntax Error: expected ')' after external function arguments");
+    consume(TokenType::SEMICOLON, "Syntax Error: expected ';' after external function declaration");
+
+    auto paramsNode = std::make_unique<ASTNode>(NodeType::BLOCK);
+    for (const auto& [paramType, paramName] : params) {
+        paramsNode->children.push_back(ast.makeParameter(paramName, paramType));
+    }
+
+    ast.addExternalFunctionDeclaration(funcName, returnType, std::move(paramsNode),
+                                       nameToken.line, nameToken.column);
 }
 
 

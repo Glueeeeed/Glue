@@ -534,6 +534,21 @@ void SemanticAnalyzer::visitFunctionCall(const ASTNode* node) {
         const std::string& expectedType = info->args[i];
         bool expectedNullable = (i < info->argsNullable.size()) ? info->argsNullable[i] : false;
 
+        if (info->isExternalFunction) {
+            const bool typeMatches = mapStringToNodeType(expectedType) == inferredType;
+            if (!typeMatches || argIsNullable) {
+                expect("Compile Error: argument " + std::to_string(i + 1) + " of externo function '" + funcName +
+                       "' must have exact non-nullable type '" + expectedType + "'",
+                       argNode->line, argNode->column);
+            }
+            if (expectedType == "int" && argNode->type == NodeType::NUMBER &&
+                !literalFitsInType(argNode->value, "int")) {
+                expect("Compile Error: integer argument does not fit in C int parameter " +
+                       std::to_string(i + 1) + " of function '" + funcName + "'",
+                       argNode->line, argNode->column);
+            }
+            continue;
+        }
 
         bool expectedIsInt = (expectedType == "byte" || expectedType == "small" || expectedType == "int" || expectedType == "long");
         bool inferredIsInt = (inferredType == NodeType::NUMBER_BYTE || inferredType == NodeType::NUMBER_SMALL ||

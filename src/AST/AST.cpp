@@ -123,6 +123,15 @@ void AST::addFunctionDefinition(std::string name, std::string returnType, std::u
     addChild(std::move(func));
 }
 
+void AST::addExternalFunctionDeclaration(std::string name, std::string returnType,
+                                         std::unique_ptr<ASTNode> params, int line, int column) {
+    auto func = std::make_unique<ASTNode>(NodeType::EXTERNAL_FUNCTION_DECLARATION, std::move(name),
+                                          false, false, false, false, line, column);
+    func->children.push_back(makeType(returnType, line, column));
+    func->children.push_back(std::move(params));
+    addChild(std::move(func));
+}
+
 void AST::addFunctionCall(std::string &name, std::vector<std::unique_ptr<ASTNode>> args) {
     auto call = std::make_unique<ASTNode>(NodeType::FUNCTION_CALL, name);
     for (auto &arg : args) {
@@ -154,6 +163,7 @@ void AST::printAST(const ASTNode* node, int indent) const {
         case NodeType::ASSIGNMENT: std::cout << "ASSIGNMENT"; break;
         case NodeType::FUNCTION_CALL: std::cout << "FUNCTION_CALL"; break;
         case NodeType::FUNCTION_DECLARATION: std::cout << "FUNCTION_DECLARATION"; break;
+        case NodeType::EXTERNAL_FUNCTION_DECLARATION: std::cout << "EXTERNAL_FUNCTION_DECLARATION"; break;
         case NodeType::BLOCK: std::cout << "BLOCK"; break;
         case NodeType::WHILE_STATEMENT: std::cout << "WHILE_STATEMENT"; break;
         case NodeType::RETURN_STATEMENT: std::cout << "RETURN_STATEMENT"; break;

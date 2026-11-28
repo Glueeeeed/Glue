@@ -33,6 +33,7 @@ class Parser {
         std::unique_ptr<ASTNode>  parseDeclaration();
         void parseArgument();
         void parseFunctionDeclaration();
+        void parseExternalFunctionDeclaration();
         void parseBreakStatement(ASTNode* parentBlock, const Token& token);
         void parseContinueStatement(ASTNode* parentBlock, const Token& token);
         void parseImportStatement();

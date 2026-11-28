@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <string>
-#include <vector>
 #include "parser/parser.h"
 #include "codegen/codegen.h"
 #include "llvm/IR/LLVMContext.h"

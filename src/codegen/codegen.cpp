@@ -2,8 +2,17 @@
 
 #include <sstream>
 #include <fstream>
+#include <filesystem>
+#include <stdexcept>
 
-#include <cstdlib>
+#if defined(_WIN32) || defined(_WIN64)
+#include <process.h>
+#else
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 #include "../parser/parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -18,6 +27,36 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
+namespace {
+int runProcess(const std::vector<std::string>& arguments) {
+    std::vector<char*> argv;
+    argv.reserve(arguments.size() + 1);
+    for (const std::string& argument : arguments) {
+        argv.push_back(const_cast<char*>(argument.c_str()));
+    }
+    argv.push_back(nullptr);
+
+#if defined(_WIN32) || defined(_WIN64)
+    return _spawnvp(_P_WAIT, argv[0], argv.data());
+#else
+    const pid_t child = fork();
+    if (child < 0) return -1;
+    if (child == 0) {
+        execvp(argv[0], argv.data());
+        _exit(127);
+    }
+
+    int status = 0;
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR) return -1;
+    }
+    if (WIFEXITED(status)) return WEXITSTATUS(status);
+    if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
+    return -1;
+#endif
+}
+}
+
 void CodeGenerator::generateCode(const ASTNode *node) {
     generateCode(std::vector<const ASTNode*>{node});
 }
@@ -28,7 +67,15 @@ void CodeGenerator::generateCode(const std::vector<const ASTNode*>& roots) {
 
     namedValuesStack.clear();
     loopStack.clear();
+    hasExternalDeclarations = false;
     for (const ASTNode* root : roots) {
+        if (root) {
+            for (const auto& child : root->children) {
+                if (child && child->type == NodeType::EXTERNAL_FUNCTION_DECLARATION) {
+                    hasExternalDeclarations = true;
+                }
+            }
+        }
         declareFunctions(root);
     }
     for (const ASTNode* root : roots) {
@@ -54,7 +101,7 @@ llvm::FunctionType *CodeGenerator::buildLLVMFunctionType(const ASTNode *node, st
     llvm::Type *retType = getLLVMType(returnTypeName, returnIsNullable);
 
     std::vector<llvm::Type *> paramTypes;
-    const ASTNode *paramsNode = (node->children.size() > 2) ? node->children[1].get() : nullptr;
+    const ASTNode *paramsNode = (node->children.size() > 1) ? node->children[1].get() : nullptr;
     if (paramsNode) {
         for (const auto &param : paramsNode->children) {
             std::string pType = param->children[1]->value;
@@ -74,7 +121,8 @@ void CodeGenerator::declareFunctions(const ASTNode *root) {
     if (!root) return;
 
     for (const auto &child : root->children) {
-        if (!child || child->type != NodeType::FUNCTION_DECLARATION) continue;
+        if (!child || (child->type != NodeType::FUNCTION_DECLARATION &&
+                       child->type != NodeType::EXTERNAL_FUNCTION_DECLARATION)) continue;
 
         std::string funcName;
         llvm::FunctionType *funcType = buildLLVMFunctionType(child.get(), funcName);
@@ -109,6 +157,7 @@ namedValuesStruct *CodeGenerator::lookupNamedValue(const std::string &name) {
 
 void CodeGenerator::generate(const ASTNode *node) {
     if (!node) return;
+    if (node->type == NodeType::EXTERNAL_FUNCTION_DECLARATION) return;
 
     switch (node->type) {
         case NodeType::PROGRAM:
@@ -1387,37 +1436,51 @@ void CodeGenerator::saveIr(const std::string& filename) {
     module->print(out, nullptr);
 }
 
-void CodeGenerator::compileAndRun(const std::string& outputBin, bool execute, std::string optimization) {
-
+void CodeGenerator::compileAndRun(const std::string& outputBin, bool execute, std::string optimization,
+                                  const std::vector<std::string>& linkCFiles) {
     saveIr("gir.ll");
 #if defined(_WIN32) || defined(_WIN64)
-    std::string cmd = "clang " + optimization + " gir.ll ../libs/runtime.c -o " + outputBin + ".exe -llegacy_stdio_definitions";
-    int result = system(cmd.c_str());
-    std::string runCmd = outputBin + ".exe";
-    std::string delCmd = "del gir.ll";
+    const std::string executable = outputBin + ".exe";
 #else
-    std::string cmd = "clang " + optimization + " gir.ll ../libs/runtime.c -o " + outputBin;
-    int result = system(cmd.c_str());
-    std::string runCmd = "./" + outputBin;
-    std::string delCmd = "rm gir.ll";
+    const std::string executable = outputBin;
 #endif
 
+    std::vector<std::string> compileArgs = {"clang", optimization, "gir.ll", "../libs/runtime.c"};
+    compileArgs.insert(compileArgs.end(), linkCFiles.begin(), linkCFiles.end());
+    compileArgs.push_back("-o");
+    compileArgs.push_back(executable);
+#if defined(_WIN32) || defined(_WIN64)
+    compileArgs.push_back("-llegacy_stdio_definitions");
+#endif
+    const int result = runProcess(compileArgs);
+
     if (result != 0) {
-        std::cerr << "[Glue] Compilation failed with code " << result << "\n";
-        return;
+        std::error_code ec;
+        std::filesystem::remove("gir.ll", ec);
+        throw std::runtime_error("[Glue] Compilation/linking failed with code " + std::to_string(result));
     }
 
     if (!execute) {
         std::cout << "[Glue] Successfully compiled to: " << outputBin << "\n";
     }
     if (execute) {
-        system(runCmd.c_str());
+        std::string runPath = executable;
+#if !defined(_WIN32) && !defined(_WIN64)
+        if (std::filesystem::path(runPath).is_relative() && !std::filesystem::path(runPath).has_parent_path()) {
+            runPath = "./" + runPath;
+        }
+#endif
+        runProcess({runPath});
     }
 
-    system(delCmd.c_str());
+    std::error_code ec;
+    std::filesystem::remove("gir.ll", ec);
 }
 
 void CodeGenerator::runJit() {
+    if (hasExternalDeclarations) {
+        throw std::runtime_error("[Glue] JIT does not support programs with externo declarations; use native compilation with C sources beside imported Glue modules");
+    }
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();

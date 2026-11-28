@@ -13,6 +13,7 @@ enum class NodeType {
     DECLARATION,
     FUNCTION_CALL,
     FUNCTION_DECLARATION,
+    EXTERNAL_FUNCTION_DECLARATION,
     BLOCK,
     RETURN_STATEMENT,
     IF_STATEMENT,
@@ -86,6 +87,8 @@ class AST {
     void addAssignment(const std::string& var, std::unique_ptr<ASTNode> expr, int line = 0, int column = 0);
     void addDeclaration(const std::string& var, std::unique_ptr<ASTNode> expr, std::string type,  bool isConst = false, bool stickyUsed = false, bool isSticky = false, bool isNullable = false, int line = 0, int column = 0);
     void addFunctionDefinition(std::string name, std::string returnType, std::unique_ptr<ASTNode> params, std::unique_ptr<ASTNode> body);
+    void addExternalFunctionDeclaration(std::string name, std::string returnType,
+                                        std::unique_ptr<ASTNode> params, int line = 0, int column = 0);
     void addFunctionArgument(std::unique_ptr<ASTNode> arg);
     void addImport(std::string import);
     std::unique_ptr<ASTNode>  addArrayDeclaration(std::unique_ptr<ASTNode> arrayType, const std::string& name, std::unique_ptr<ASTNode> literals, int line = 0, int column = 0);
