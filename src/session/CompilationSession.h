@@ -1,10 +1,15 @@
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
+#include <functional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
+#include "FileResolver.h"
 #include "SourceUnit.h"
 #include "../codegen/codegen.h"
 #include "../parser/parser.h"
@@ -22,8 +27,8 @@ inline std::string normalizePath(const std::string& rawPath) {
 
 class CompilationSession {
 public:
-    explicit CompilationSession(std::string entryFile)
-        : entryPath_(normalizePath(entryFile)), codeGenerator_(context_) {}
+    explicit CompilationSession(std::string entryFile, std::filesystem::path projectRoot = {})
+        : entryPath_(normalizePath(entryFile)), fileResolver_(entryPath_, projectRoot), codeGenerator_(context_) {}
 
     void loadEntry() {
         addUnit(entryPath_);
@@ -69,15 +74,70 @@ public:
         if (!findUnit(entryPath_)) {
             throw std::logic_error("Load the entry file before parsing");
         }
-        for (size_t i = 0; i < units_.size(); ++i) {
-            SourceUnit& unit = units_[i];
-            if (unit.ast.has_value()) {
-                continue;
+
+        enum class ParseState { Visiting, Done };
+        std::unordered_map<std::string, ParseState> states;
+        std::vector<std::string> importStack;
+        std::function<void(const std::string&)> parseUnit;
+        parseUnit = [&](const std::string& rawPath) {
+            const std::string path = normalizePath(rawPath);
+            auto state = states.find(path);
+            if (state != states.end()) {
+                if (state->second == ParseState::Done) {
+                    return;
+                }
+
+                const auto cycleStart = std::find(importStack.begin(), importStack.end(), path);
+                std::ostringstream cycle;
+                cycle << "Import cycle detected: ";
+                for (auto current = cycleStart; current != importStack.end(); ++current) {
+                    if (current != cycleStart) cycle << " -> ";
+                    cycle << *current;
+                }
+                cycle << " -> " << path;
+                throw std::runtime_error(cycle.str());
             }
-            Parser parser(unit.tokens, context_);
-            parser.parse();
-            unit.ast = parser.getAST();
-        }
+
+            size_t unitIndex = units_.size();
+            for (size_t i = 0; i < units_.size(); ++i) {
+                if (units_[i].canonicalPath == path) {
+                    unitIndex = i;
+                    break;
+                }
+            }
+            if (unitIndex == units_.size()) {
+                throw std::logic_error("Source unit was not loaded before parsing: " + path);
+            }
+
+            states.emplace(path, ParseState::Visiting);
+            importStack.push_back(path);
+            if (!units_[unitIndex].ast.has_value()) {
+                Parser parser(units_[unitIndex].tokens, context_);
+                parser.parse();
+                units_[unitIndex].ast = parser.getAST();
+            }
+
+            std::vector<std::string> imports;
+            const ASTNode* root = units_[unitIndex].ast->getRoot();
+            if (root) {
+                for (const auto& child : root->children) {
+                    if (child && child->type == NodeType::IMPORT_STATEMENT) {
+                        imports.push_back(child->value);
+                    }
+                }
+            }
+
+            for (const std::string& moduleName : imports) {
+                const std::string dependencyPath = fileResolver_.resolve(moduleName, path);
+                addUnit(dependencyPath);
+                parseUnit(dependencyPath);
+            }
+
+            importStack.pop_back();
+            states[path] = ParseState::Done;
+        };
+
+        parseUnit(entryPath_);
     }
 
     void analyzeAll() {
@@ -158,6 +218,7 @@ public:
 private:
     std::string entryPath_;
     std::vector<SourceUnit> units_;
+    FileResolver fileResolver_;
     SemanticAnalyzer semantic_;
     llvm::LLVMContext context_;
     CodeGenerator codeGenerator_;

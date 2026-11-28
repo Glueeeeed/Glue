@@ -78,6 +78,7 @@ add_executable(glue
         src/session/SourceUnit.h
         src/session/CompilationSession.h
         src/session/CompilationSession.cpp
+        src/session/FileResolver.h
 )
 
 target_include_directories(glue PRIVATE

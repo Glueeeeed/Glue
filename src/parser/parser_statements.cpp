@@ -115,10 +115,6 @@ void Parser::parseIfStatement(ASTNode* parentBlock, const Token& token) {
     parentBlock->children.push_back(std::move(ifNode));
 }
 
-std::unique_ptr<ASTNode> parseImportStatement() {
-
-}
-
 void Parser::parseWhileStatement(ASTNode* parentBlock, const Token& token) {
     int whileLine = token.line;
     int whileCol = token.column;
