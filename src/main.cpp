@@ -130,45 +130,22 @@ int main(int argc, char* argv[]) {
     CompilationSession session(opts.inputFile);
     try {
         session.loadEntry();
+        session.parseAll();
+        if (opts.printAST) {
+            session.printAST();
+            return 0;
+        }
+        session.analyzeAll();
+        session.generateCode();
+
+        if (opts.jit) {
+            session.runJit();
+        } else {
+            session.compileAndRun(opts.outputBin, opts.run, opts.optimization);
+        }
     } catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
-        return 1;
-    }
-
-    llvm::LLVMContext context;
-    Parser parser(session.mainUnit().tokens, context);
-
-
-    try {
-        parser.parse();
-    } catch (const std::exception &e) {
-        std::cerr << e.what() << '\n';
         return 2;
-    }
-
-    if (opts.printAST) {
-        std::cout << "=== AST ===" << std::endl;
-        parser.printAST();
-        std::cout << "=== End AST ===" << std::endl;
-        return 0;
-    }
-
-    try {
-        parser.runSemanticAnalysis();
-    } catch (const std::exception &e) {
-        std::cerr << e.what() << '\n';
-        return 2;
-    }
-
-    CodeGenerator& codegen = parser.getCodeGenerator();
-    codegen.generateCode(parser.getRoot());
-
-    if (opts.jit) {
-        codegen.runJit();
-    } else if (opts.run) {
-        codegen.compileAndRun(opts.outputBin, true, opts.optimization);
-    } else {
-        codegen.compileAndRun(opts.outputBin, false, opts.optimization);
     }
 
     return 0;

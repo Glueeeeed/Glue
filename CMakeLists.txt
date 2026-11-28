@@ -77,6 +77,7 @@ add_executable(glue
         src/codegen/codegen_utils.cpp
         src/session/SourceUnit.h
         src/session/CompilationSession.h
+        src/session/CompilationSession.cpp
 )
 
 target_include_directories(glue PRIVATE

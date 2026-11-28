@@ -178,7 +178,7 @@ void SemanticAnalyzer::visitProgram(const ASTNode* node) {
         }
         visit(child.get());
     }
-    if (!hasMain) {
+    if (requireMainInProgram && !hasMain) {
         expect("Compile Error: Program must contain a 'main' function");
     }
 }

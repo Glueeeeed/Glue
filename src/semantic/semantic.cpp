@@ -59,7 +59,21 @@ void SemanticAnalyzer::analyse(const ASTNode *root) {
     if (root->type == NodeType::PROGRAM) {
         registerFunctionSignatures(root);
     }
-    visit(root);
+    analyseRegistered(root, true);
+}
+
+void SemanticAnalyzer::analyseRegistered(const ASTNode* root, bool requireMain) {
+    if (!root) return;
+
+    const bool previousRequirement = requireMainInProgram;
+    requireMainInProgram = requireMain;
+    try {
+        visit(root);
+    } catch (...) {
+        requireMainInProgram = previousRequirement;
+        throw;
+    }
+    requireMainInProgram = previousRequirement;
 }
 
 void SemanticAnalyzer::visit(const ASTNode* node) {

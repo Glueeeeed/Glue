@@ -19,11 +19,21 @@
 #include "llvm/Support/Path.h"
 
 void CodeGenerator::generateCode(const ASTNode *node) {
+    generateCode(std::vector<const ASTNode*>{node});
+}
+
+void CodeGenerator::generateCode(const std::vector<const ASTNode*>& roots) {
     module = std::make_unique<llvm::Module>("glue_auto", context);
     module->setTargetTriple(llvm::Triple(llvm::sys::getDefaultTargetTriple()));
 
-    declareFunctions(node);
-    generate(node);
+    namedValuesStack.clear();
+    loopStack.clear();
+    for (const ASTNode* root : roots) {
+        declareFunctions(root);
+    }
+    for (const ASTNode* root : roots) {
+        generate(root);
+    }
 
     save();
 }

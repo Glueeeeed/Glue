@@ -138,7 +138,7 @@ void AST::addFunctionArgument(std::unique_ptr<ASTNode> arg) {
 
 // Supporting method
 
-void AST::printAST(const ASTNode* node, int indent) {
+void AST::printAST(const ASTNode* node, int indent) const {
     for (int i = 0; i < indent; i++) std::cout << "  ";
 
     std::cout << "[";

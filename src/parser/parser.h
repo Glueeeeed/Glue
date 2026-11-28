@@ -75,10 +75,7 @@ class Parser {
         std::pair<std::string, std::string> parseFunctionHeader();
         static void expect(std::string msg, std::string filePath, int line, int column);
         void printASTCall();
-        void printAST() { ast.printAST(ast.getRoot()); }
-
-        CodeGenerator& getCodeGenerator() { return codegen; }
-        const ASTNode* getRoot() { return ast.getRoot(); }
+        AST getAST() { return std::move(ast); }
         void runSemanticAnalysis() { semantic.analyse(ast.getRoot()); }
 
 };

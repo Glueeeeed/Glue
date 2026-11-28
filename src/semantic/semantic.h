@@ -14,10 +14,12 @@ class SemanticAnalyzer {
     std::string currentFunctionName;
     int loopDepth = 0;
     int isWhile = 0;
+    bool requireMainInProgram = true;
 
 
 public:
     void analyse(const ASTNode* node);
+    void analyseRegistered(const ASTNode* node, bool requireMain);
     void visit(const ASTNode* node);
     void visitDeclaration(const ASTNode* node);
     void visitAssignment(const ASTNode* node);

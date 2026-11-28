@@ -10,6 +10,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <vector>
 
 struct namedValuesStruct {
     llvm::AllocaInst* pointer;
@@ -79,6 +80,7 @@ public:
     explicit CodeGenerator(llvm::LLVMContext &ctx)
     : context(ctx), builder(context) {}
     void generateCode(const ASTNode* node);
+    void generateCode(const std::vector<const ASTNode*>& roots);
     void generate(const ASTNode* node);
 
     void saveIr(const std::string& filename = "gir.ll");

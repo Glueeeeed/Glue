@@ -96,7 +96,7 @@ class AST {
         return root.get();
     }
 
-    void printAST(const ASTNode* node, int indent = 0);
+    void printAST(const ASTNode* node, int indent = 0) const;
     void testAST(const ASTNode* node);
 
 
